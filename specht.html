@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>De Specht - Lunch Bestellen</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #F7F7F9; margin: 0; padding-bottom: 160px; }
+        .menu-item { background: white; border: 1px solid #f0f0f0; transition: all 0.15s ease; }
+        .menu-item:active { transform: scale(0.97); }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .cat-btn.active { background-color: #FF5A5F; color: white; border-color: #FF5A5F; }
+        .modal-overlay { background: rgba(0,0,0,0.6); display: none; position: fixed; top:0; left:0; right:0; bottom:0; z-index:100; align-items:center; justify-content:center; backdrop-filter:blur(4px); overflow-y:auto; }
+        .tab-btn { padding: 10px 13px; border: none; background: white; border-bottom: 3px solid transparent; cursor: pointer; font-weight: 600; font-size: 13px; white-space: nowrap; }
+        .tab-btn.active { border-bottom-color: #FF5A5F; color: #FF5A5F; }
+        .order-card { background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 12px; margin-bottom: 8px; }
+        .price-change { background: #FEF3C7; border: 1px solid #FCD34D; border-radius: 8px; padding: 12px; margin-bottom: 8px; }
+        .price-change.lower { background: #DBEAFE; border-color: #93C5FD; }
+        .screen { display: none; }
+        .screen.active { display: block; }
+    </style>
+</head>
+<body>
+
+<!-- ===================== LOGIN ===================== -->
+<div id="login-screen" class="screen container mx-auto max-w-md p-5">
+    <div class="text-center mb-8 pt-8">
+        <div class="text-5xl mb-3">🍟</div>
+        <h1 class="text-3xl font-black mb-1">De Specht</h1>
+        <p class="text-gray-400 text-sm">Goor</p>
+    </div>
+    <div class="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
+        <h2 class="text-xl font-bold mb-4 text-center">Hoe heet je?</h2>
+        <input type="text" id="username" class="w-full p-4 border border-gray-200 rounded-2xl mb-4 outline-none focus:ring-2 focus:ring-red-400 text-base" placeholder="Jouw naam">
+        <button id="login-btn" class="bg-[#FF5A5F] text-white w-full py-4 rounded-2xl font-bold text-lg hover:bg-[#FF3E46]">Start Bestellen</button>
+    </div>
+    <div class="text-center mt-6">
+        <a href="index.html" class="text-xs text-gray-400 hover:text-gray-600">← Terug naar overzicht</a>
+    </div>
+</div>
+
+<!-- ===================== MENU ===================== -->
+<div id="menu-screen" class="screen container mx-auto max-w-md p-5">
+    <div class="flex justify-between items-center mb-3">
+        <a href="index.html" class="text-xs text-gray-600 font-black bg-white border border-gray-200 px-3 py-2 rounded-xl no-underline">← Home</a>
+        <span class="text-base font-black">🍟 De Specht</span>
+        <button id="toggle-orders-btn" class="text-[10px] text-gray-600 font-black bg-white border border-gray-200 px-3 py-2 rounded-xl">📋</button>
+    </div>
+    <div class="flex justify-between items-center mb-4">
+        <button id="toggle-admin-btn" class="text-[10px] text-gray-600 font-black bg-white border border-gray-200 px-3 py-2 rounded-xl">⚙️ Beheer</button>
+        <span id="greeting" class="text-xs text-gray-400 font-medium"></span>
+        <button id="logout-btn" class="text-[10px] text-red-400 font-black hover:text-red-500">Wijzig Naam</button>
+    </div>
+    <div class="sticky top-0 bg-[#F7F7F9] pt-2 pb-4 z-40">
+        <input type="text" id="menu-search" placeholder="Zoeken..." class="w-full p-4 rounded-2xl border border-gray-200 outline-none focus:ring-2 focus:ring-red-300 mb-3 text-sm">
+        <div id="category-bar" class="flex gap-2 overflow-x-auto hide-scrollbar pb-2"></div>
+    </div>
+    <div id="menu-container"></div>
+</div>
+
+<!-- ===================== BESTELLINGEN ===================== -->
+<div id="orders-screen" class="screen container mx-auto max-w-md p-5">
+    <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-black">Bestellingen Vandaag</h2>
+        <button id="back-from-orders-btn" class="text-xs text-white bg-gray-800 px-4 py-2 rounded-full font-bold">Terug</button>
+    </div>
+    <div id="public-orders-list" class="space-y-2 mb-4"></div>
+    <div class="p-6 bg-gradient-to-br from-red-50 to-orange-50 rounded-3xl border border-red-100">
+        <div class="flex justify-between items-center">
+            <span class="text-gray-500 font-bold uppercase text-[10px]">Totaal Vandaag</span>
+            <span class="text-4xl font-black text-[#FF5A5F]">€<span id="public-grand-total">0.00</span></span>
+        </div>
+    </div>
+</div>
+
+<!-- ===================== ADMIN ===================== -->
+<div id="admin-screen" class="screen container mx-auto max-w-md p-5">
+    <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-black">Beheer — De Specht</h2>
+        <button id="back-to-menu-btn" class="text-xs text-white bg-gray-800 px-4 py-2 rounded-full font-bold">Terug</button>
+    </div>
+
+    <div id="password-check" class="bg-yellow-50 border border-yellow-200 rounded-2xl p-4 mb-6">
+        <p class="text-sm text-yellow-800 mb-3 font-bold">🔒 Voer het beheerderswachtwoord in:</p>
+        <input type="password" id="admin-password" placeholder="Wachtwoord" class="w-full p-3 border border-yellow-300 rounded-xl mb-3 text-sm">
+        <button id="unlock-admin-btn" class="w-full bg-yellow-500 text-white py-2 rounded-xl font-bold hover:bg-yellow-600">Ontgrendelen</button>
+    </div>
+
+    <div id="admin-content" class="hidden">
+        <div class="flex gap-1 mb-4 border-b border-gray-200 overflow-x-auto hide-scrollbar">
+            <button class="tab-btn active" data-tab="export">📥 Export</button>
+            <button class="tab-btn" data-tab="products">📝 Producten</button>
+            <button class="tab-btn" data-tab="upload-prices">📄 Prijzen</button>
+        </div>
+
+        <!-- EXPORT TAB -->
+        <div id="export-tab" class="tab-content">
+            <button id="export-pdf-btn" class="w-full text-white bg-[#FF5A5F] px-4 py-3 rounded-xl font-bold mb-3 hover:bg-[#FF3E46]">📄 Download PDF Bon</button>
+            <button id="clear-orders-btn" class="w-full text-red-500 bg-red-50 border border-red-200 px-4 py-2 rounded-xl font-bold mb-4 text-sm hover:bg-red-100">🗑️ Alle bestellingen wissen</button>
+            <div id="admin-orders-list" class="space-y-2"></div>
+            <div class="mt-4 p-6 bg-gradient-to-br from-red-50 to-orange-50 rounded-3xl border border-red-100">
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-500 font-bold uppercase text-[10px]">Totaal Vandaag</span>
+                    <span class="text-4xl font-black text-[#FF5A5F]">€<span id="admin-grand-total">0.00</span></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- PRODUCTS TAB -->
+        <div id="products-tab" class="tab-content hidden">
+            <div class="bg-blue-50 border border-blue-200 rounded-2xl p-4">
+                <p class="text-sm text-blue-800 mb-3">Wijzig prijzen en items. Wijzigingen worden direct opgeslagen.</p>
+                <div id="menu-editor" class="space-y-4 max-h-[55vh] overflow-y-auto"></div>
+                <button id="add-item-btn" class="mt-4 w-full py-3 bg-green-500 text-white font-bold rounded-xl hover:bg-green-600">+ Nieuw Item</button>
+            </div>
+        </div>
+
+        <!-- UPLOAD PRICES TAB -->
+        <div id="upload-prices-tab" class="tab-content hidden">
+            <div class="bg-purple-50 border border-purple-200 rounded-2xl p-4 mb-4">
+                <p class="text-sm text-purple-800 mb-3 font-bold">📄 Upload een nieuwe prijslijst (PDF)</p>
+                <input type="file" id="pdf-upload" accept=".pdf" class="w-full mb-3">
+                <button id="analyze-pdf-btn" class="w-full bg-purple-500 text-white py-3 rounded-xl font-bold hover:bg-purple-600">📊 Analyseer PDF</button>
+                <div id="pdf-status" class="mt-3 text-sm"></div>
+            </div>
+            <div id="price-changes-container" class="hidden">
+                <h3 class="font-bold mb-3">Prijswijzigingen gevonden:</h3>
+                <div id="changes-list" class="space-y-2 mb-4 max-h-80 overflow-y-auto"></div>
+                <div class="flex gap-2">
+                    <button id="approve-changes-btn" class="flex-1 bg-green-500 text-white py-3 rounded-xl font-bold hover:bg-green-600">✅ Akkoord & Updaten</button>
+                    <button id="cancel-changes-btn" class="flex-1 bg-gray-300 text-gray-700 py-3 rounded-xl font-bold hover:bg-gray-400">❌ Annuleren</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===================== CART EDIT ===================== -->
+<div id="cart-edit-screen" class="screen container mx-auto max-w-md p-5">
+    <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-black">Bestelling Aanpassen</h2>
+        <button id="back-to-menu-from-cart-btn" class="text-xs text-white bg-gray-800 px-4 py-2 rounded-full font-bold">Terug</button>
+    </div>
+    <div id="cart-edit-container" class="space-y-3 mb-6"></div>
+    <div class="p-6 bg-gradient-to-br from-red-50 to-orange-50 rounded-3xl border border-red-100 mb-4">
+        <div class="flex justify-between items-center">
+            <span class="text-gray-500 font-bold uppercase text-[10px]">Totaal</span>
+            <span class="text-4xl font-black text-[#FF5A5F]">€<span id="cart-edit-total">0.00</span></span>
+        </div>
+    </div>
+    <button id="confirm-order-btn" class="w-full bg-[#FF5A5F] text-white py-4 rounded-2xl font-black text-lg hover:bg-[#FF3E46] mb-3">Bestelling Bevestigen</button>
+    <button id="cancel-order-btn" class="w-full bg-gray-200 text-gray-700 py-3 rounded-2xl font-bold hover:bg-gray-300">Annuleren</button>
+</div>
+
+<!-- ===================== CART FOOTER ===================== -->
+<div id="cart-footer" class="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-gray-100 p-5 shadow-2xl hidden z-50">
+    <div class="container mx-auto max-w-md flex justify-between items-center gap-4">
+        <div>
+            <div class="text-[10px] text-gray-400 font-black uppercase">Totaal</div>
+            <div class="text-3xl font-black text-[#FF5A5F]">€<span id="total-price">0.00</span></div>
+        </div>
+        <div class="flex gap-2">
+            <button id="edit-cart-btn" class="bg-gray-500 text-white px-6 py-4 rounded-2xl font-black shadow-lg hover:bg-gray-600">✏️ Wijzig</button>
+            <button id="send-btn" class="bg-[#FF5A5F] text-white px-6 py-4 rounded-2xl font-black shadow-lg hover:bg-[#FF3E46]">Bestellen</button>
+        </div>
+    </div>
+</div>
+
+<!-- ===================== MODAL ===================== -->
+<div id="modal" class="modal-overlay">
+    <div class="bg-white p-8 rounded-3xl max-w-xs w-full mx-4 text-center shadow-2xl">
+        <div id="modal-content"></div>
+        <button id="modal-close" class="mt-6 w-full py-3 bg-gray-100 rounded-xl font-bold hidden">Sluiten</button>
+    </div>
+</div>
+
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+// ============================================================
+// RESTAURANT CONFIG — pas dit aan per restaurant-bestand
+// ============================================================
+const RESTAURANT_ID   = "specht";
+const RESTAURANT_NAME = "De Specht";
+const ADMIN_PASSWORD  = "Ipex26";
+const LS_USER         = "lunch_user_specht";
+const LS_ORDERS       = "lunch_orders_specht";
+const LS_MENU         = "lunch_menu_specht";
+
+// ============================================================
+// MENU DATA — standaard menu voor dit restaurant
+// ============================================================
+const DEFAULT_MENU = [
+    { category: "Patat", items: [
+        { id: 1,  name: "Patat Klein",              price: 2.60 },
+        { id: 2,  name: "Patat Middel",             price: 2.90 },
+        { id: 3,  name: "Patat Groot",              price: 3.30 },
+        { id: 4,  name: "Familiezak 4 Personen",    price: 11.60 },
+        { id: 5,  name: "Aardappelschijfjes",       price: 3.50 },
+        { id: 6,  name: "Krulfriet",                price: 3.50 },
+        { id: 7,  name: "Grote Patat Waterfiets",   price: 7.50 },
+        { id: 8,  name: "Grote Patat Huifkar",      price: 7.50 }
+    ]},
+    { category: "Patat Specialiteiten", items: [
+        { id: 10, name: "Boerensaus",               price: 6.50 },
+        { id: 11, name: "Stoofvlees",               price: 6.50 },
+        { id: 12, name: "Grote Patat Beenham",      price: 8.00 },
+        { id: 13, name: "Grote Patat Shoarma",      price: 9.00 },
+        { id: 14, name: "Chili Chicken",            price: 8.50 },
+        { id: 15, name: "Grote Patat Pulled Pork",  price: 8.50 },
+        { id: 16, name: "Kapsalon",                 price: 10.00 },
+        { id: 17, name: "Truffelfriet Italiaanse Kaas", price: 7.50 }
+    ]},
+    { category: "Snacks", items: [
+        { id: 100, name: "Frikandel",               price: 2.15 },
+        { id: 101, name: "Frikandel Speciaal",      price: 2.95 },
+        { id: 102, name: "XXL Frikandel",           price: 3.50 },
+        { id: 103, name: "XXL Frikandel Speciaal",  price: 4.80 },
+        { id: 104, name: "Viandel",                 price: 2.60 },
+        { id: 105, name: "Kroket",                  price: 2.20 },
+        { id: 106, name: "Van Dobben Kroket",       price: 2.70 },
+        { id: 107, name: "Kalfskroket",             price: 2.70 },
+        { id: 108, name: "Goulashkroket",           price: 2.70 },
+        { id: 109, name: "Satékroket",              price: 2.70 },
+        { id: 110, name: "Bamischijf",              price: 2.40 },
+        { id: 111, name: "Pittige Bamischijf",      price: 2.70 },
+        { id: 112, name: "Nasischijf",              price: 2.30 },
+        { id: 113, name: "Berehap",                 price: 3.20 },
+        { id: 114, name: "Gehaktbal",               price: 3.75 },
+        { id: 115, name: "Boerenbrok",              price: 2.70 },
+        { id: 116, name: "Hete Donder",             price: 2.70 },
+        { id: 117, name: "Picanto",                 price: 2.70 },
+        { id: 118, name: "Mexicano",                price: 2.70 },
+        { id: 119, name: "Trio",                    price: 2.70 },
+        { id: 120, name: "Loempia",                 price: 3.60 },
+        { id: 121, name: "Vietnamese Loempia's 2 st.", price: 3.20 },
+        { id: 122, name: "Braadworst",              price: 2.90 },
+        { id: 123, name: "Knakworst",               price: 2.25 },
+        { id: 124, name: "Shoarmarol",              price: 2.70 },
+        { id: 125, name: "Satérol",                 price: 2.50 },
+        { id: 126, name: "Smulrol",                 price: 2.70 },
+        { id: 127, name: "Kaassoufflé",             price: 2.40 },
+        { id: 128, name: "XXL Kaassoufflé",         price: 3.10 },
+        { id: 129, name: "Ham/Kaassoufflé",         price: 2.50 },
+        { id: 130, name: "Kipcorn",                 price: 2.55 },
+        { id: 131, name: "Kikastick",               price: 2.70 },
+        { id: 132, name: "Ragouzi",                 price: 2.60 },
+        { id: 133, name: "Kaaskroket",              price: 2.50 },
+        { id: 134, name: "Eierbal",                 price: 3.00 }
+    ]},
+    { category: "Bittergarnituur", items: [
+        { id: 200, name: "Mini Snacks 8 st.",        price: 4.50 },
+        { id: 201, name: "Hotwings 6 st.",           price: 4.60 },
+        { id: 202, name: "Bitterballen 6 st.",       price: 3.40 },
+        { id: 203, name: "Kipnuggets 8 st.",         price: 3.50 },
+        { id: 204, name: "Chickenstrips 4 st.",      price: 3.65 },
+        { id: 205, name: "Uienringen 8 st.",         price: 3.10 },
+        { id: 206, name: "Vlammetjes 6 st.",         price: 3.40 },
+        { id: 207, name: "Torpedo Garnalen 6 st.",   price: 6.50 }
+    ]},
+    { category: "Vleesgerechten", items: [
+        { id: 300, name: "Halve Haan",              price: 7.50 },
+        { id: 301, name: "Varkensschnitzel",         price: 5.95 },
+        { id: 302, name: "Kipschnitzel",             price: 6.95 },
+        { id: 303, name: "Shaslick 190gr",           price: 5.95 },
+        { id: 304, name: "Saté Kip",                price: 6.75 }
+    ]},
+    { category: "Dranken", items: [
+        { id: 600, name: "Petfles Cola/Fanta",       price: 3.25 },
+        { id: 601, name: "Petfles Melk",             price: 2.90 },
+        { id: 602, name: "Red Bull",                 price: 2.95 },
+        { id: 603, name: "Blik Bier",                price: 2.95 },
+        { id: 604, name: "Krat Bier",                price: 25.00 },
+        { id: 605, name: "Milkshake Klein",          price: 3.00 },
+        { id: 606, name: "Milkshake Middel",         price: 3.50 },
+        { id: 607, name: "Milkshake Groot",          price: 4.00 }
+    ]},
+    { category: "Menu's", items: [
+        { id: 700, name: "Kipschnitzel Menu",        price: 14.50 },
+        { id: 701, name: "Saté Kip Menu",            price: 14.00 },
+        { id: 702, name: "Halve Haan Menu",          price: 15.00 },
+        { id: 703, name: "Hotwings Menu",            price: 13.00 },
+        { id: 704, name: "Wings en Ribs Menu",       price: 15.00 },
+        { id: 705, name: "Varkens Schnitzel Menu",   price: 13.50 },
+        { id: 706, name: "Shaslick Menu",            price: 14.00 },
+        { id: 707, name: "Pulled Pork Menu",         price: 14.00 },
+        { id: 708, name: "Shoarma Menu",             price: 15.25 },
+        { id: 709, name: "Bouwvakkers Menu",         price: 13.00 },
+        { id: 710, name: "Boerenfriet Menu",         price: 14.00 },
+        { id: 711, name: "Torpedo Garnalen Menu",    price: 14.00 },
+        { id: 712, name: "Spare-Ribs Menu",          price: 15.00 },
+        { id: 713, name: "Spare-Ribs XXL Menu",      price: 19.00 },
+        { id: 714, name: "Kidsbox De Bonte Specht",  price: 8.50 }
+    ]},
+    { category: "Burgermenu's", items: [
+        { id: 800, name: "Beefburger Menu",          price: 14.50 },
+        { id: 801, name: "Big Nick Burger Menu",     price: 14.50 },
+        { id: 802, name: "Guacamole Burger Menu",    price: 14.50 },
+        { id: 803, name: "BBQ Chicken Burger Menu",  price: 14.50 },
+        { id: 804, name: "Vega Burger Menu",         price: 12.00 },
+        { id: 805, name: "Spechtburger Menu",        price: 12.50 },
+        { id: 806, name: "Hamburger Menu",           price: 12.50 }
+    ]},
+    { category: "Broodspecialiteiten", items: [
+        { id: 900, name: "Indy's Special",           price: 9.00 },
+        { id: 901, name: "Tuna Melt",                price: 9.00 },
+        { id: 902, name: "Nick's Special",           price: 9.00 },
+        { id: 903, name: "Baguette Chili Chicken",   price: 8.00 },
+        { id: 904, name: "Baguette Mexicano",        price: 5.00 }
+    ]},
+    { category: "Warm Belegde Broodjes", items: [
+        { id: 1000, name: "Broodje Gehaktbal",       price: 5.00 },
+        { id: 1001, name: "Broodje Kroketburger",    price: 3.50 },
+        { id: 1002, name: "Broodje Van Dobben Kroket", price: 3.50 },
+        { id: 1003, name: "Flaguette Pulled Pork",   price: 7.80 },
+        { id: 1004, name: "Baguette Beenham",        price: 6.80 },
+        { id: 1005, name: "Flaguette Shoarma",       price: 7.80 },
+        { id: 1006, name: "Tosti Ham/Kaas",          price: 5.00 },
+        { id: 1007, name: "Broodje Kipburger",       price: 3.70 },
+        { id: 1008, name: "Cheeseburger",            price: 3.95 }
+    ]},
+    { category: "Broodjes (Koud Belegd)", items: [
+        { id: 1100, name: "Stoete Zalm",             price: 8.00 },
+        { id: 1101, name: "Stoete Tonijn",           price: 8.00 },
+        { id: 1102, name: "Stoete Burrata",          price: 8.00 },
+        { id: 1103, name: "Stoete Good Te Passe",    price: 6.60 },
+        { id: 1104, name: "Stoete Brie Van Mie",     price: 7.50 },
+        { id: 1105, name: "Kip'n Op Stoete",         price: 8.00 },
+        { id: 1106, name: "Stoete Rauw Fleish",      price: 7.50 },
+        { id: 1107, name: "Stoete Rosbief",          price: 7.50 },
+        { id: 1108, name: "Stoete Carpaccio",        price: 8.75 }
+    ]},
+    { category: "Salades", items: [
+        { id: 1200, name: "Zalm Salade",             price: 11.00 },
+        { id: 1201, name: "Rundercarpaccio Salade",  price: 11.00 },
+        { id: 1202, name: "Ceasarsalade",            price: 11.00 },
+        { id: 1203, name: "Salade Burrata",          price: 11.00 },
+        { id: 1204, name: "Slaatje",                 price: 3.95 },
+        { id: 1205, name: "Rauwkostslaatje",         price: 2.80 }
+    ]}
+];
+
+// ============================================================
+// STATE
+// ============================================================
+let menuData   = [];
+let orders     = [];
+let cart       = [];
+let currentUser     = localStorage.getItem(LS_USER) || "";
+let adminUnlocked   = false;
+let currentCategory = "All";
+let nextId          = 5000;
+let pendingChanges  = [];
+
+function loadMenuData() {
+    const s = localStorage.getItem(LS_MENU);
+    menuData = s ? JSON.parse(s) : JSON.parse(JSON.stringify(DEFAULT_MENU));
+}
+function saveMenuData() { localStorage.setItem(LS_MENU, JSON.stringify(menuData)); }
+
+function loadOrders() {
+    const s = localStorage.getItem(LS_ORDERS);
+    orders = s ? JSON.parse(s) : [];
+}
+function saveOrders() { localStorage.setItem(LS_ORDERS, JSON.stringify(orders)); }
+
+// ============================================================
+// SCREENS
+// ============================================================
+function showScreen(id) {
+    document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+    document.getElementById(id).classList.add("active");
+    document.getElementById("cart-footer").classList.add("hidden");
+}
+
+function showMenu() {
+    showScreen("menu-screen");
+    if (cart.length > 0) document.getElementById("cart-footer").classList.remove("hidden");
+    renderCategories();
+    renderMenu();
+}
+function showOrders()  {
+    showScreen("orders-screen");
+    renderPublicOrders();
+}
+function showAdmin()   {
+    showScreen("admin-screen");
+    adminUnlocked = false;
+    document.getElementById("admin-content").classList.add("hidden");
+    document.getElementById("password-check").classList.remove("hidden");
+    document.getElementById("admin-password").value = "";
+}
+function showCartEdit() {
+    showScreen("cart-edit-screen");
+    renderCartEdit();
+}
+
+// ============================================================
+// LOGIN
+// ============================================================
+function doLogin() {
+    const name = document.getElementById("username").value.trim();
+    if (!name) return;
+    currentUser = name;
+    localStorage.setItem(LS_USER, name);
+    loadMenuData();
+    loadOrders();
+    document.getElementById("greeting").textContent = `Hoi ${name} 👋`;
+    showMenu();
+}
+
+// ============================================================
+// MENU RENDER
+// ============================================================
+function renderCategories() {
+    const bar = document.getElementById("category-bar");
+    bar.innerHTML = "";
+    ["All", ...menuData.map(c => c.category)].forEach(c => {
+        const btn = document.createElement("button");
+        btn.className = `cat-btn flex-shrink-0 px-4 py-2 rounded-full border border-gray-200 text-xs font-bold bg-white text-gray-500 transition-all ${currentCategory === c ? "active" : ""}`;
+        btn.textContent = c;
+        btn.onclick = () => { currentCategory = c; renderCategories(); renderMenu(); };
+        bar.appendChild(btn);
+    });
+}
+
+function renderMenu() {
+    const cont = document.getElementById("menu-container");
+    const q = document.getElementById("menu-search").value.toLowerCase();
+    cont.innerHTML = "";
+
+    menuData.forEach(cat => {
+        if (currentCategory !== "All" && cat.category !== currentCategory) return;
+        const items = cat.items.filter(i => i.name.toLowerCase().includes(q));
+        if (!items.length) return;
+
+        const h = document.createElement("h2");
+        h.className = "text-[10px] font-black text-gray-400 uppercase tracking-widest mt-10 mb-4 border-b border-gray-100 pb-2";
+        h.textContent = cat.category;
+        cont.appendChild(h);
+
+        items.forEach(item => {
+            const count = cart.filter(c => c.id === item.id).length;
+            const div = document.createElement("div");
+            div.className = "menu-item p-4 rounded-3xl mb-3 flex justify-between items-center";
+            div.innerHTML = `
+                <div class="flex-1">
+                    <h3 class="font-bold text-gray-800 text-sm">${item.name}</h3>
+                    <div class="text-[#FF5A5F] font-black text-xs mt-1">€${item.price.toFixed(2)}</div>
+                </div>
+                <div class="flex items-center bg-gray-50 rounded-2xl p-1">
+                    ${count > 0 ? `<button class="btn-minus w-8 h-8 flex items-center justify-center font-bold text-gray-400 text-lg">−</button>
+                    <span class="w-6 text-center text-xs font-black text-gray-700">${count}</span>` : ""}
+                    <button class="btn-plus w-8 h-8 flex items-center justify-center font-black text-gray-500 text-lg">+</button>
+                </div>`;
+            div.querySelector(".btn-plus").onclick = () => { cart.push({...item}); updateCartUI(); };
+            if (count > 0) {
+                div.querySelector(".btn-minus").onclick = () => {
+                    const idx = cart.findLastIndex(c => c.id === item.id);
+                    if (idx > -1) cart.splice(idx, 1);
+                    updateCartUI();
+                };
+            }
+            cont.appendChild(div);
+        });
+    });
+}
+
+function updateCartUI() {
+    document.getElementById("cart-footer").classList.toggle("hidden", cart.length === 0);
+    document.getElementById("total-price").textContent = cart.reduce((s,i) => s+i.price, 0).toFixed(2);
+    renderMenu();
+}
+
+// ============================================================
+// ORDERS PUBLIC
+// ============================================================
+function renderPublicOrders() {
+    const list = document.getElementById("public-orders-list");
+    const today = new Date().toDateString();
+    const todayOrders = orders.filter(o => new Date(o.date).toDateString() === today);
+
+    if (!todayOrders.length) {
+        list.innerHTML = '<p class="text-center text-gray-400 py-8">Nog geen bestellingen vandaag.</p>';
+        document.getElementById("public-grand-total").textContent = "0.00";
+        return;
+    }
+    list.innerHTML = "";
+    let total = 0;
+    todayOrders.forEach(o => {
+        total += o.total;
+        const counts = o.items.reduce((a,c) => { a[c.name]=(a[c.name]||0)+1; return a; }, {});
+        const str = Object.entries(counts).map(([n,c]) => `${c}× ${n}`).join(", ");
+        const card = document.createElement("div");
+        card.className = "order-card";
+        card.innerHTML = `
+            <div class="flex justify-between items-start">
+                <div class="flex-1">
+                    <div class="font-bold text-gray-800 text-sm">${o.user}</div>
+                    <div class="text-xs text-gray-500 mt-1">${str}</div>
+                </div>
+                <div class="font-black text-[#FF5A5F] text-sm ml-3">€${o.total.toFixed(2)}</div>
+            </div>`;
+        list.appendChild(card);
+    });
+    document.getElementById("public-grand-total").textContent = total.toFixed(2);
+}
+
+// ============================================================
+// SUBMIT ORDER
+// ============================================================
+function submitOrder() {
+    if (!cart.length) return;
+    orders.push({ user: currentUser, items: [...cart], total: cart.reduce((s,i)=>s+i.price,0), date: new Date().toISOString() });
+    saveOrders();
+    cart = [];
+    showModal(`🍟<h2 class="text-xl font-bold mt-2">Smakelijk!</h2><p class="text-gray-400 text-sm mt-1">Bestelling geplaatst.</p>`, true);
+    showMenu();
+}
+
+// ============================================================
+// CART EDIT
+// ============================================================
+function renderCartEdit() {
+    const cont = document.getElementById("cart-edit-container");
+    cont.innerHTML = "";
+    const grouped = cart.reduce((acc, item) => {
+        const ex = acc.find(g => g.id === item.id);
+        ex ? ex.count++ : acc.push({...item, count:1});
+        return acc;
+    }, []);
+    grouped.forEach(item => {
+        const div = document.createElement("div");
+        div.className = "bg-white p-4 rounded-xl border border-gray-200 flex justify-between items-center";
+        div.innerHTML = `
+            <div class="flex-1">
+                <h3 class="font-bold text-sm">${item.name}</h3>
+                <p class="text-xs text-gray-500">€${item.price.toFixed(2)} per stuk</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <button class="w-8 h-8 bg-gray-100 rounded-lg font-bold text-gray-600 hover:bg-gray-200 text-lg">−</button>
+                <span class="w-6 text-center font-bold text-sm">${item.count}</span>
+                <button class="w-8 h-8 bg-gray-100 rounded-lg font-bold text-gray-600 hover:bg-gray-200 text-lg">+</button>
+            </div>`;
+        div.querySelectorAll("button")[0].onclick = () => {
+            for (let i=0; i<item.count; i++) { const idx=cart.findIndex(c=>c.id===item.id); if(idx>-1) cart.splice(idx,1); }
+            renderCartEdit(); updateCartUI();
+        };
+        div.querySelectorAll("button")[1].onclick = () => { cart.push({...item}); renderCartEdit(); updateCartUI(); };
+        cont.appendChild(div);
+    });
+    document.getElementById("cart-edit-total").textContent = cart.reduce((s,i)=>s+i.price,0).toFixed(2);
+}
+
+// ============================================================
+// ADMIN
+// ============================================================
+function unlockAdmin() {
+    if (document.getElementById("admin-password").value === ADMIN_PASSWORD) {
+        adminUnlocked = true;
+        document.getElementById("password-check").classList.add("hidden");
+        document.getElementById("admin-content").classList.remove("hidden");
+        renderAdminOrders();
+    } else {
+        showModal("❌ Verkeerd wachtwoord", true);
+        document.getElementById("admin-password").value = "";
+    }
+}
+
+function renderAdminOrders() {
+    const list = document.getElementById("admin-orders-list");
+    const today = new Date().toDateString();
+    const todayOrders = orders.filter(o => new Date(o.date).toDateString() === today);
+    if (!todayOrders.length) {
+        list.innerHTML = '<p class="text-center text-gray-400 py-8">Geen bestellingen vandaag.</p>';
+        document.getElementById("admin-grand-total").textContent = "0.00";
+        return;
+    }
+    list.innerHTML = "";
+    let total = 0;
+    todayOrders.forEach(o => {
+        total += o.total;
+        const counts = o.items.reduce((a,c) => { a[c.name]=(a[c.name]||0)+1; return a; }, {});
+        const str = Object.entries(counts).map(([n,c]) => `${c}× ${n}`).join(", ");
+        const card = document.createElement("div");
+        card.className = "order-card flex justify-between items-start";
+        card.innerHTML = `
+            <div class="flex-1">
+                <div class="flex justify-between items-center">
+                    <span class="font-bold text-sm">${o.user}</span>
+                    <span class="font-black text-[#FF5A5F] text-sm">€${o.total.toFixed(2)}</span>
+                </div>
+                <div class="text-xs text-gray-500 mt-1">${str}</div>
+            </div>
+            <button class="ml-3 text-red-400 font-bold hover:text-red-600 text-lg">×</button>`;
+        card.querySelector("button").onclick = () => {
+            if (confirm(`Bestelling van ${o.user} verwijderen?`)) {
+                const idx = orders.indexOf(o);
+                if (idx > -1) orders.splice(idx, 1);
+                saveOrders();
+                renderAdminOrders();
+            }
+        };
+        list.appendChild(card);
+    });
+    document.getElementById("admin-grand-total").textContent = total.toFixed(2);
+}
+
+function renderMenuEditor() {
+    const editor = document.getElementById("menu-editor");
+    editor.innerHTML = "";
+    menuData.forEach((cat, catIdx) => {
+        const div = document.createElement("div");
+        div.className = "bg-white p-4 rounded-xl border border-gray-200";
+        let html = `<h3 class="font-bold mb-3 text-gray-800 text-sm">${cat.category}</h3><div class="space-y-2">`;
+        cat.items.forEach((item, itemIdx) => {
+            html += `<div class="flex gap-2 items-center text-xs">
+                <input type="text" value="${item.name}" class="flex-1 px-2 py-1.5 border border-gray-300 rounded-lg"
+                    onchange="updateItemName(${catIdx},${itemIdx},this.value)">
+                <input type="number" value="${item.price}" step="0.01" class="w-20 px-2 py-1.5 border border-gray-300 rounded-lg text-center"
+                    onchange="updateItemPrice(${catIdx},${itemIdx},parseFloat(this.value))">
+                <button onclick="deleteItem(${catIdx},${itemIdx})" class="text-red-400 hover:text-red-600 font-bold px-1.5 py-1 hover:bg-red-50 rounded">×</button>
+            </div>`;
+        });
+        html += "</div>";
+        div.innerHTML = html;
+        editor.appendChild(div);
+    });
+}
+
+function updateItemName(ci, ii, v) { menuData[ci].items[ii].name = v; saveMenuData(); }
+function updateItemPrice(ci, ii, v) { menuData[ci].items[ii].price = v; saveMenuData(); }
+function deleteItem(ci, ii) {
+    if (confirm("Verwijderen?")) { menuData[ci].items.splice(ii,1); saveMenuData(); renderMenuEditor(); }
+}
+function addNewItem() {
+    const cat = prompt("Categorie naam:");
+    if (!cat) return;
+    let c = menuData.find(x => x.category === cat);
+    if (!c) { c = {category: cat, items: []}; menuData.push(c); }
+    c.items.push({id: nextId++, name: "Nieuw Item", price: 0.00});
+    saveMenuData(); renderMenuEditor();
+}
+function clearOrders() {
+    if (confirm("Alle bestellingen van vandaag wissen?")) {
+        const today = new Date().toDateString();
+        orders = orders.filter(o => new Date(o.date).toDateString() !== today);
+        saveOrders(); renderAdminOrders();
+    }
+}
+
+// ============================================================
+// PDF EXPORT
+// ============================================================
+function exportPDF() {
+    const today = new Date().toDateString();
+    const todayOrders = orders.filter(o => new Date(o.date).toDateString() === today);
+    if (!todayOrders.length) { alert("Geen bestellingen om te exporteren."); return; }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    let y = 15;
+    const W = doc.internal.pageSize.getWidth();
+    const M = 15;
+
+    doc.setFontSize(20); doc.setFont(undefined,"bold");
+    doc.text(RESTAURANT_NAME.toUpperCase(), W/2, y, {align:"center"}); y+=10;
+    doc.setFontSize(10); doc.setFont(undefined,"normal"); doc.setTextColor(120);
+    doc.text("Bestelbon", W/2, y, {align:"center"}); y+=7;
+    doc.setFontSize(9);
+    doc.text(new Date().toLocaleDateString("nl-NL",{year:"numeric",month:"long",day:"numeric"}), W/2, y, {align:"center"});
+    doc.setTextColor(0); y+=12;
+    doc.setLineWidth(0.3); doc.line(M, y, W-M, y); y+=8;
+
+    const colN=40, colI=85;
+    doc.setFontSize(9); doc.setFont(undefined,"bold");
+    doc.text("Naam", M, y); doc.text("Bestelling", M+colN, y); doc.text("Bedrag", W-M-10, y, {align:"right"}); y+=6;
+    doc.setLineWidth(0.2); doc.line(M, y, W-M, y); y+=6;
+    doc.setFont(undefined,"normal");
+
+    let total = 0;
+    todayOrders.forEach(o => {
+        const counts = o.items.reduce((a,c)=>{a[c.name]=(a[c.name]||0)+1;return a;},{});
+        const str = Object.entries(counts).map(([n,c])=>`${c}x ${n}`).join(", ");
+        const lines = doc.splitTextToSize(str, colI-5);
+        const rh = Math.max(6, lines.length*5)+1;
+        if (Math.floor(y/10)%2===0) { doc.setFillColor(245,245,245); doc.rect(M,y-4,W-M*2,rh,"F"); }
+        doc.text(o.user, M+2, y);
+        doc.text(lines, M+colN+2, y);
+        doc.text(`€${o.total.toFixed(2)}`, W-M-2, y, {align:"right"});
+        y += rh+1; total += o.total;
+        if (y > 270) { doc.addPage(); y=15; }
+    });
+
+    y+=2; doc.setLineWidth(0.3); doc.line(M, y, W-M, y); y+=8;
+    doc.setFont(undefined,"bold"); doc.setFontSize(12);
+    doc.text("TOTAAL", M, y); doc.text(`€${total.toFixed(2)}`, W-M-2, y, {align:"right"});
+    doc.save(`Bestelbon_${RESTAURANT_ID}_${new Date().toISOString().split("T")[0]}.pdf`);
+}
+
+// ============================================================
+// PDF PRICE ANALYSIS
+// ============================================================
+async function analyzePDF() {
+    const file = document.getElementById("pdf-upload").files[0];
+    if (!file) { showPdfStatus("❌ Selecteer eerst een PDF", "error"); return; }
+    showPdfStatus("⏳ PDF wordt gelezen...", "info");
+    try {
+        const buf = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({data: buf}).promise;
+        let text = "";
+        for (let i=1; i<=pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const tc = await page.getTextContent();
+            text += tc.items.map(x=>x.str).join(" ") + "\n";
+        }
+        const extracted = extractPrices(text);
+        if (!extracted.length) { showPdfStatus("❌ Geen prijzen gevonden", "error"); return; }
+        compareWithMenu(extracted);
+        showPdfStatus(`✅ ${extracted.length} items gevonden`, "success");
+    } catch(e) {
+        showPdfStatus(`❌ Fout: ${e.message}`, "error");
+    }
+}
+function extractPrices(text) {
+    return text.split(/[\n\r]+/).reduce((acc, line) => {
+        const m = line.match(/^(.+?)\s+(?:€\s*)?(\d{1,2}[.,]\d{2})\s*$/);
+        if (m) {
+            const name = m[1].trim(), price = parseFloat(m[2].replace(",","."));
+            if (name.length>2 && name.length<120 && price>0 && price<200) acc.push({name, price});
+        }
+        return acc;
+    }, []);
+}
+function compareWithMenu(extracted) {
+    pendingChanges = [];
+    extracted.forEach(ex => {
+        menuData.forEach((cat, ci) => {
+            cat.items.forEach((item, ii) => {
+                if (item.name.toLowerCase()===ex.name.toLowerCase() && Math.abs(item.price-ex.price)>0.01) {
+                    pendingChanges.push({ci, ii, name:item.name, oldPrice:item.price, newPrice:ex.price});
+                }
+            });
+        });
+    });
+    const cont = document.getElementById("price-changes-container");
+    const list = document.getElementById("changes-list");
+    list.innerHTML = "";
+    if (!pendingChanges.length) {
+        list.innerHTML = '<p class="text-center text-gray-500 text-sm">Geen prijswijzigingen gevonden.</p>';
+    } else {
+        pendingChanges.forEach(ch => {
+            const div = document.createElement("div");
+            div.className = ch.newPrice > ch.oldPrice ? "price-change" : "price-change lower";
+            div.innerHTML = `<div class="font-bold text-sm">${ch.name}</div>
+                <div class="text-xs text-gray-600 mt-1">€${ch.oldPrice.toFixed(2)} → <strong>€${ch.newPrice.toFixed(2)}</strong>
+                ${ch.newPrice>ch.oldPrice ? " ↑" : " ↓"}</div>`;
+            list.appendChild(div);
+        });
+    }
+    cont.classList.remove("hidden");
+}
+function approvePriceChanges() {
+    pendingChanges.forEach(ch => { menuData[ch.ci].items[ch.ii].price = ch.newPrice; });
+    saveMenuData();
+    showModal(`✅ ${pendingChanges.length} prijzen bijgewerkt!`, true);
+    document.getElementById("price-changes-container").classList.add("hidden");
+    document.getElementById("pdf-upload").value = "";
+    document.getElementById("pdf-status").innerHTML = "";
+    pendingChanges = [];
+    renderMenuEditor();
+}
+function showPdfStatus(msg, type) {
+    const el = document.getElementById("pdf-status");
+    el.textContent = msg;
+    el.className = type==="error" ? "mt-3 text-sm text-red-600" : type==="success" ? "mt-3 text-sm text-green-600" : "mt-3 text-sm text-gray-500";
+}
+
+// ============================================================
+// MODAL
+// ============================================================
+function showModal(html, closeable) {
+    document.getElementById("modal-content").innerHTML = html;
+    document.getElementById("modal").style.display = "flex";
+    document.getElementById("modal-close").classList.toggle("hidden", !closeable);
+}
+function closeModal() { document.getElementById("modal").style.display = "none"; }
+
+// ============================================================
+// EVENT LISTENERS
+// ============================================================
+document.getElementById("login-btn").onclick = doLogin;
+document.getElementById("username").onkeydown = e => { if(e.key==="Enter") doLogin(); };
+document.getElementById("logout-btn").onclick = () => { localStorage.removeItem(LS_USER); location.reload(); };
+document.getElementById("toggle-orders-btn").onclick = showOrders;
+document.getElementById("back-from-orders-btn").onclick = showMenu;
+document.getElementById("toggle-admin-btn").onclick = showAdmin;
+document.getElementById("back-to-menu-btn").onclick = showMenu;
+document.getElementById("back-to-menu-from-cart-btn").onclick = showMenu;
+document.getElementById("menu-search").oninput = renderMenu;
+document.getElementById("send-btn").onclick = submitOrder;
+document.getElementById("edit-cart-btn").onclick = showCartEdit;
+document.getElementById("confirm-order-btn").onclick = submitOrder;
+document.getElementById("cancel-order-btn").onclick = showMenu;
+document.getElementById("unlock-admin-btn").onclick = unlockAdmin;
+document.getElementById("admin-password").onkeydown = e => { if(e.key==="Enter") unlockAdmin(); };
+document.getElementById("export-pdf-btn").onclick = exportPDF;
+document.getElementById("clear-orders-btn").onclick = clearOrders;
+document.getElementById("add-item-btn").onclick = addNewItem;
+document.getElementById("analyze-pdf-btn").onclick = analyzePDF;
+document.getElementById("approve-changes-btn").onclick = approvePriceChanges;
+document.getElementById("cancel-changes-btn").onclick = () => {
+    document.getElementById("price-changes-container").classList.add("hidden");
+    pendingChanges = [];
+};
+document.getElementById("modal-close").onclick = closeModal;
+
+document.querySelectorAll(".tab-btn").forEach(btn => {
+    btn.onclick = e => {
+        document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+        document.querySelectorAll(".tab-content").forEach(c => c.classList.add("hidden"));
+        e.target.classList.add("active");
+        const tab = e.target.dataset.tab;
+        document.getElementById(tab+"-tab").classList.remove("hidden");
+        if (tab==="export") renderAdminOrders();
+        if (tab==="products") renderMenuEditor();
+    };
+});
+
+// ============================================================
+// INIT
+// ============================================================
+loadMenuData();
+loadOrders();
+if (currentUser) {
+    document.getElementById("greeting").textContent = `Hoi ${currentUser} 👋`;
+    showMenu();
+} else {
+    showScreen("login-screen");
+}
+</script>
+</body>
+</html>
