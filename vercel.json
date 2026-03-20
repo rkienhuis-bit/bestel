@@ -1,5 +1,5 @@
 {
   "rewrites": [
-    { "source": "/", "destination": "/de-specht-complete.html" }
+    { "source": "/", "destination": "/index.html" }
   ]
 }
