@@ -320,11 +320,10 @@
         loadScheduling();
         renderRestaurants();
         
-        if (currentUser) {
-            document.getElementById("home-screen").classList.add("hidden");
-        } else {
-            document.getElementById("home-screen").classList.remove("hidden");
-        }
+        // Show home screen by default
+        document.getElementById("home-screen").classList.remove("hidden");
+        document.getElementById("menu-screen").classList.add("hidden");
+        document.getElementById("global-admin-screen").classList.add("hidden");
 
         // Event listeners
         document.getElementById("admin-home-btn").onclick = () => {
