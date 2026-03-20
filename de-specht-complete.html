@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>De Specht - Lunch Bestellen & Beheren</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -17,10 +19,13 @@
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         .cat-btn.active { background-color: #FF5A5F; color: white; border-color: #FF5A5F; }
-        .modal-overlay { background: rgba(0,0,0,0.6); display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 100; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
-        input[type="number"], input[type="text"], input[type="password"] { padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; }
+        .modal-overlay { background: rgba(0,0,0,0.6); display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 100; align-items: center; justify-content: center; backdrop-filter: blur(4px); overflow-y: auto; }
+        input[type="number"], input[type="text"], input[type="password"], input[type="file"] { padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; }
         .tab-btn { padding: 10px 16px; border: none; background: white; border-bottom: 3px solid transparent; cursor: pointer; font-weight: 600; font-size: 14px; }
         .tab-btn.active { border-bottom-color: #FF5A5F; color: #FF5A5F; }
+        .order-card { background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 12px; margin-bottom: 8px; }
+        .price-change { background: #FEF3C7; border: 1px solid #FCD34D; border-radius: 8px; padding: 12px; margin-bottom: 8px; }
+        .price-change.new { background: #DBEAFE; border-color: #93C5FD; }
     </style>
 </head>
 <body>
@@ -43,6 +48,9 @@
     <!-- MENU -->
     <div id="menu-screen" class="hidden">
         <div class="flex justify-between items-center mb-4">
+            <button id="toggle-orders-btn" class="text-[10px] text-gray-600 font-black bg-white border border-gray-200 px-3 py-2 rounded-xl">
+                📋 Bestellingen
+            </button>
             <button id="toggle-admin-btn" class="text-[10px] text-gray-600 font-black bg-white border border-gray-200 px-3 py-2 rounded-xl">
                 ⚙️ Beheer
             </button>
@@ -58,6 +66,23 @@
         </div>
 
         <div id="menu-container"></div>
+    </div>
+
+    <!-- ORDERS LIST (Public) -->
+    <div id="orders-screen" class="hidden">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-2xl font-black">Bestellingen Vandaag</h2>
+            <button id="back-from-orders-btn" class="text-xs text-white bg-gray-800 px-4 py-2 rounded-full font-bold">Terug</button>
+        </div>
+
+        <div id="public-orders-list" class="space-y-2 mb-4"></div>
+
+        <div class="p-6 bg-gradient-to-br from-red-50 to-orange-50 rounded-3xl border border-red-100">
+            <div class="flex justify-between items-center">
+                <span class="text-gray-500 font-bold uppercase text-[10px]">Totaal</span>
+                <span class="text-4xl font-black text-[#FF5A5F]">€<span id="public-grand-total">0.00</span></span>
+            </div>
+        </div>
     </div>
 
     <!-- ADMIN -->
@@ -79,20 +104,21 @@
         <!-- ADMIN CONTENT (Hidden until unlocked) -->
         <div id="admin-content" class="hidden">
             <div class="flex gap-2 mb-4 border-b border-gray-200">
-                <button class="tab-btn active" data-tab="orders">📋 Bestellingen</button>
+                <button class="tab-btn active" data-tab="export">📥 Export</button>
                 <button class="tab-btn" data-tab="products">📝 Producten</button>
+                <button class="tab-btn" data-tab="upload-prices">📄 Prijzen</button>
             </div>
 
-            <!-- ORDERS TAB -->
-            <div id="orders-tab" class="tab-content">
-                <button id="export-csv-btn" class="w-full text-xs text-white bg-[#FF5A5F] px-4 py-3 rounded-xl font-bold mb-4">
-                    ⬇️ Export Excel
+            <!-- EXPORT TAB -->
+            <div id="export-tab" class="tab-content">
+                <button id="export-pdf-btn" class="w-full text-white bg-[#FF5A5F] px-4 py-3 rounded-xl font-bold mb-4 hover:bg-[#FF3E46]">
+                    📄 Download als PDF (Bon)
                 </button>
-                <div id="master-list-container" class="space-y-4"></div>
-                <div class="mt-8 p-6 bg-gradient-to-br from-red-50 to-orange-50 rounded-3xl border border-red-100">
+                <div id="admin-orders-list" class="space-y-2"></div>
+                <div class="mt-4 p-6 bg-gradient-to-br from-red-50 to-orange-50 rounded-3xl border border-red-100">
                     <div class="flex justify-between items-center">
                         <span class="text-gray-500 font-bold uppercase text-[10px]">Totaal</span>
-                        <span class="text-4xl font-black text-[#FF5A5F]">€<span id="grand-total">0.00</span></span>
+                        <span class="text-4xl font-black text-[#FF5A5F]">€<span id="admin-grand-total">0.00</span></span>
                     </div>
                 </div>
             </div>
@@ -107,6 +133,35 @@
                     <button id="add-item-btn" class="mt-6 w-full py-3 bg-green-500 text-white font-bold rounded-xl hover:bg-green-600">
                         + Nieuw Item
                     </button>
+                </div>
+            </div>
+
+            <!-- UPLOAD PRICES TAB -->
+            <div id="upload-prices-tab" class="tab-content hidden">
+                <div class="bg-purple-50 border border-purple-200 rounded-2xl p-4 mb-4">
+                    <p class="text-sm text-purple-800 mb-3 font-bold">📄 Upload een nieuwe prijslijst (PDF)</p>
+                    
+                    <input type="file" id="pdf-upload" accept=".pdf" class="w-full mb-3">
+                    <button id="analyze-pdf-btn" class="w-full bg-purple-500 text-white py-3 rounded-xl font-bold hover:bg-purple-600">
+                        📊 Analyseer PDF
+                    </button>
+
+                    <div id="pdf-status" class="mt-3 text-sm text-gray-600"></div>
+                </div>
+
+                <!-- Price changes comparison -->
+                <div id="price-changes-container" class="hidden">
+                    <h3 class="font-bold mb-3">Prijswijzigingen gevonden:</h3>
+                    <div id="changes-list" class="space-y-2 mb-4 max-h-96 overflow-y-auto"></div>
+                    
+                    <div class="flex gap-2">
+                        <button id="approve-changes-btn" class="flex-1 bg-green-500 text-white py-3 rounded-xl font-bold hover:bg-green-600">
+                            ✅ Akkoord & Updaten
+                        </button>
+                        <button id="cancel-changes-btn" class="flex-1 bg-gray-300 text-gray-700 py-3 rounded-xl font-bold hover:bg-gray-400">
+                            ❌ Annuleren
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -163,7 +218,35 @@
     </div>
 </div>
 
+<!-- HIDDEN PDF CONTENT FOR EXPORT -->
+<div id="pdf-content" style="display: none; width: 210mm; padding: 20px; background: white;">
+    <div style="text-align: center; margin-bottom: 30px;">
+        <h1 style="font-size: 28px; margin: 0; font-weight: bold;">De Specht 🍟</h1>
+        <p style="font-size: 12px; color: #666; margin: 5px 0;">Bestelbon</p>
+    </div>
+
+    <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+        <tr style="border-bottom: 2px solid #333;">
+            <th style="text-align: left; padding: 10px; font-weight: bold;">Naam</th>
+            <th style="text-align: left; padding: 10px; font-weight: bold;">Bestelling</th>
+            <th style="text-align: right; padding: 10px; font-weight: bold;">Bedrag</th>
+        </tr>
+        <tbody id="pdf-table-body"></tbody>
+    </table>
+
+    <div style="text-align: right; padding: 20px; border-top: 2px solid #333; border-bottom: 2px solid #333;">
+        <p style="margin: 0; font-weight: bold; font-size: 18px;">Totaal: €<span id="pdf-total">0.00</span></p>
+    </div>
+
+    <p style="text-align: center; font-size: 11px; color: #999; margin-top: 20px;">
+        Bedrukt op: <span id="pdf-date"></span>
+    </p>
+</div>
+
 <script>
+    // Set PDF.js worker
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
     // ========== MENU DATA ==========
     let menuData = [
         {
@@ -358,6 +441,7 @@
     let adminUnlocked = false;
     let currentCategory = "All";
     let nextId = 2000;
+    let pendingPriceChanges = [];
 
     const ADMIN_PASSWORD = "Specht";
 
@@ -376,24 +460,177 @@
         localStorage.setItem("spechtMenuData", JSON.stringify(menuData));
     }
 
-    // ========== INIT ==========
+    // ========== PDF ANALYSIS ==========
+    async function analyzePDF() {
+        const fileInput = document.getElementById("pdf-upload");
+        if (!fileInput.files[0]) {
+            showPdfStatus("❌ Selecteer eerst een PDF bestand", "error");
+            return;
+        }
+
+        const status = document.getElementById("pdf-status");
+        status.innerHTML = "⏳ PDF wordt gelezen...";
+
+        try {
+            const file = fileInput.files[0];
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            
+            let fullText = "";
+            for (let i = 1; i <= pdf.numPages; i++) {
+                const page = await pdf.getPage(i);
+                const textContent = await page.getTextContent();
+                fullText += textContent.items.map(item => item.str).join(" ");
+            }
+
+            // Parse prices from text
+            const extractedPrices = extractPricesFromText(fullText);
+            
+            if (extractedPrices.length === 0) {
+                showPdfStatus("❌ Geen prijzen gevonden in PDF", "error");
+                return;
+            }
+
+            // Compare with current menu
+            compareWithCurrentMenu(extractedPrices);
+            showPdfStatus(`✅ ${extractedPrices.length} items gelezen`, "success");
+
+        } catch (error) {
+            showPdfStatus(`❌ Fout bij lezen PDF: ${error.message}`, "error");
+            console.error(error);
+        }
+    }
+
+    function extractPricesFromText(text) {
+        // Regex to find prices (e.g., "2.60", "€2.60", "2,60")
+        const priceRegex = /([A-Z][A-Za-z\s\-']{2,60}?)\s+(?:€\s*)?(\d{1,2}[.,]\d{2})/g;
+        const prices = [];
+        let match;
+
+        while ((match = priceRegex.exec(text)) !== null) {
+            const name = match[1].trim();
+            const priceStr = match[2].replace(",", ".");
+            const price = parseFloat(priceStr);
+            
+            if (name.length > 2 && name.length < 100 && price > 0) {
+                prices.push({ name, price });
+            }
+        }
+
+        return prices;
+    }
+
+    function compareWithCurrentMenu(extractedPrices) {
+        pendingPriceChanges = [];
+
+        extractedPrices.forEach(extracted => {
+            // Find matching item in menu
+            let found = false;
+            
+            menuData.forEach(cat => {
+                cat.items.forEach(item => {
+                    // Fuzzy match on name
+                    if (item.name.toLowerCase().includes(extracted.name.toLowerCase()) ||
+                        extracted.name.toLowerCase().includes(item.name.toLowerCase())) {
+                        
+                        if (Math.abs(item.price - extracted.price) > 0.01) {
+                            // Price changed
+                            pendingPriceChanges.push({
+                                id: item.id,
+                                catIdx: menuData.indexOf(cat),
+                                itemIdx: cat.items.indexOf(item),
+                                name: item.name,
+                                oldPrice: item.price,
+                                newPrice: extracted.price
+                            });
+                            found = true;
+                        }
+                    }
+                });
+            });
+        });
+
+        displayPriceChanges();
+    }
+
+    function displayPriceChanges() {
+        const container = document.getElementById("price-changes-container");
+        const list = document.getElementById("changes-list");
+        
+        list.innerHTML = "";
+
+        if (pendingPriceChanges.length === 0) {
+            list.innerHTML = '<p class="text-center text-gray-500">Geen prijswijzigingen gevonden.</p>';
+            container.classList.remove("hidden");
+            return;
+        }
+
+        pendingPriceChanges.forEach(change => {
+            const div = document.createElement("div");
+            div.className = change.newPrice > change.oldPrice ? "price-change" : "price-change new";
+            div.innerHTML = `
+                <div class="font-bold text-sm">${change.name}</div>
+                <div class="text-xs text-gray-600">
+                    <span>€${change.oldPrice.toFixed(2)}</span>
+                    <span class="mx-2">→</span>
+                    <span class="font-bold">€${change.newPrice.toFixed(2)}</span>
+                </div>
+            `;
+            list.appendChild(div);
+        });
+
+        container.classList.remove("hidden");
+    }
+
+    function approvePriceChanges() {
+        pendingPriceChanges.forEach(change => {
+            menuData[change.catIdx].items[change.itemIdx].price = change.newPrice;
+        });
+
+        saveMenuData();
+        showModal(`✅ ${pendingPriceChanges.length} prijzen bijgewerkt!`, true);
+        
+        // Reset
+        document.getElementById("price-changes-container").classList.add("hidden");
+        document.getElementById("pdf-upload").value = "";
+        document.getElementById("pdf-status").innerHTML = "";
+        pendingPriceChanges = [];
+        
+        renderMenuEditor();
+    }
+
+    function showPdfStatus(msg, type) {
+        const status = document.getElementById("pdf-status");
+        status.innerHTML = msg;
+        status.className = type === "error" ? "mt-3 text-sm text-red-600" : "mt-3 text-sm text-green-600";
+    }
+
+    // ========== EVENT LISTENERS ==========
     document.getElementById("login-btn").onclick = saveName;
     document.getElementById("logout-btn").onclick = () => {
         localStorage.removeItem("spechtUser");
         location.reload();
     };
+    document.getElementById("toggle-orders-btn").onclick = showOrders;
     document.getElementById("toggle-admin-btn").onclick = showAdmin;
+    document.getElementById("back-from-orders-btn").onclick = showMenu;
     document.getElementById("back-to-menu-btn").onclick = showMenu;
     document.getElementById("back-to-menu-from-cart-btn").onclick = backToMenu;
     document.getElementById("menu-search").oninput = renderMenu;
     document.getElementById("send-btn").onclick = submitOrder;
     document.getElementById("modal-close").onclick = closeModal;
-    document.getElementById("export-csv-btn").onclick = exportCSV;
+    document.getElementById("export-pdf-btn").onclick = exportPDF;
     document.getElementById("edit-cart-btn").onclick = editCart;
     document.getElementById("confirm-order-btn").onclick = submitOrder;
     document.getElementById("cancel-order-btn").onclick = backToMenu;
     document.getElementById("unlock-admin-btn").onclick = unlockAdmin;
     document.getElementById("add-item-btn").onclick = addNewItem;
+    document.getElementById("analyze-pdf-btn").onclick = analyzePDF;
+    document.getElementById("approve-changes-btn").onclick = approvePriceChanges;
+    document.getElementById("cancel-changes-btn").onclick = () => {
+        document.getElementById("price-changes-container").classList.add("hidden");
+        pendingPriceChanges = [];
+    };
 
     // Tab switching
     document.querySelectorAll(".tab-btn").forEach(btn => {
@@ -403,7 +640,7 @@
             e.target.classList.add("active");
             const tab = e.target.dataset.tab;
             document.getElementById(tab + "-tab").classList.remove("hidden");
-            if (tab === "orders") renderAdmin();
+            if (tab === "export") renderAdminOrders();
             if (tab === "products") renderMenuEditor();
         };
     });
@@ -486,6 +723,39 @@
         renderMenu();
     }
 
+    function showOrders() {
+        document.getElementById("menu-screen").classList.add("hidden");
+        document.getElementById("orders-screen").classList.remove("hidden");
+        document.getElementById("admin-screen").classList.add("hidden");
+        document.getElementById("cart-footer").classList.add("hidden");
+        renderPublicOrders();
+    }
+
+    function renderPublicOrders() {
+        const list = document.getElementById("public-orders-list");
+        const today = new Date().toDateString();
+        const todayOrders = orders.filter(o => new Date(o.date).toDateString() === today);
+        
+        if (todayOrders.length === 0) {
+            list.innerHTML = '<p class="text-center text-gray-400 py-8">Nog geen bestellingen.</p>';
+            document.getElementById("public-grand-total").innerText = "0.00";
+            return;
+        }
+        
+        list.innerHTML = "";
+        let total = 0;
+        
+        todayOrders.forEach((o) => {
+            total += o.total;
+            const card = document.createElement("div");
+            card.className = "order-card";
+            card.innerHTML = `<div class="font-bold text-gray-800">${o.user}</div>`;
+            list.appendChild(card);
+        });
+        
+        document.getElementById("public-grand-total").innerText = total.toFixed(2);
+    }
+
     function editCart() {
         document.getElementById("menu-screen").classList.add("hidden");
         document.getElementById("admin-screen").classList.add("hidden");
@@ -508,7 +778,7 @@
             return acc;
         }, []);
 
-        grouped.forEach((item, idx) => {
+        grouped.forEach((item) => {
             const div = document.createElement("div");
             div.className = "bg-white p-4 rounded-xl border border-gray-200 flex justify-between items-center";
             div.innerHTML = `
@@ -527,7 +797,10 @@
             const plusBtn = div.querySelector("button:last-of-type");
 
             minBtn.onclick = () => {
-                cart = cart.filter(c => !(c.id === item.id && cart.indexOf(c) === idx));
+                for (let i = 0; i < item.count; i++) {
+                    const idx = cart.findIndex(c => c.id === item.id);
+                    if (idx > -1) cart.splice(idx, 1);
+                }
                 renderCartEdit();
                 updateUI();
             };
@@ -580,33 +853,34 @@
         document.getElementById("password-check").classList.remove("hidden");
     }
 
+    function showMenu() {
+        document.getElementById("menu-screen").classList.remove("hidden");
+        document.getElementById("admin-screen").classList.add("hidden");
+        document.getElementById("orders-screen").classList.add("hidden");
+        if (cart.length > 0) document.getElementById("cart-footer").classList.remove("hidden");
+    }
+
     function unlockAdmin() {
         const password = document.getElementById("admin-password").value;
         if (password === ADMIN_PASSWORD) {
             adminUnlocked = true;
             document.getElementById("password-check").classList.add("hidden");
             document.getElementById("admin-content").classList.remove("hidden");
-            renderAdmin();
+            renderAdminOrders();
         } else {
             showModal('❌ Verkeerd wachtwoord', true);
             document.getElementById("admin-password").value = "";
         }
     }
 
-    function showMenu() {
-        document.getElementById("menu-screen").classList.remove("hidden");
-        document.getElementById("admin-screen").classList.add("hidden");
-        if (cart.length > 0) document.getElementById("cart-footer").classList.remove("hidden");
-    }
-
-    function renderAdmin() {
-        const list = document.getElementById("master-list-container");
+    function renderAdminOrders() {
+        const list = document.getElementById("admin-orders-list");
         const today = new Date().toDateString();
         const todayOrders = orders.filter(o => new Date(o.date).toDateString() === today);
         
         if (todayOrders.length === 0) {
             list.innerHTML = '<p class="text-center text-gray-400 py-8">Geen bestellingen vandaag.</p>';
-            document.getElementById("grand-total").innerText = "0.00";
+            document.getElementById("admin-grand-total").innerText = "0.00";
             return;
         }
         
@@ -619,7 +893,7 @@
             const itemsStr = Object.entries(counts).map(([n, c]) => `${c}x ${n}`).join(", ");
             
             const card = document.createElement("div");
-            card.className = "bg-white p-4 rounded-xl border border-gray-200";
+            card.className = "order-card";
             card.innerHTML = `
                 <div class="grid grid-cols-3 gap-2 text-sm">
                     <div class="font-bold">${o.user}</div>
@@ -630,7 +904,7 @@
             list.appendChild(card);
         });
         
-        document.getElementById("grand-total").innerText = total.toFixed(2);
+        document.getElementById("admin-grand-total").innerText = total.toFixed(2);
     }
 
     function renderMenuEditor() {
@@ -696,7 +970,7 @@
         renderMenuEditor();
     }
 
-    function exportCSV() {
+    function exportPDF() {
         const today = new Date().toDateString();
         const todayOrders = orders.filter(o => new Date(o.date).toDateString() === today);
         
@@ -705,24 +979,37 @@
             return;
         }
 
-        let csv = "\uFEFF";
-        csv += "Naam,Bestelling,Bedrag\n";
-        
+        const tableBody = document.getElementById("pdf-table-body");
+        tableBody.innerHTML = "";
+        let total = 0;
+
         todayOrders.forEach(o => {
             const counts = o.items.reduce((a, c) => { a[c.name] = (a[c.name] || 0) + 1; return a; }, {});
             const itemsStr = Object.entries(counts).map(([n, c]) => `${c}x ${n}`).join(", ");
-            csv += `"${o.user}","${itemsStr}","${o.total.toFixed(2)}"\n`;
+            
+            const row = document.createElement("tr");
+            row.style.borderBottom = "1px solid #ddd";
+            row.innerHTML = `
+                <td style="padding: 8px; text-align: left;">${o.user}</td>
+                <td style="padding: 8px; text-align: left;">${itemsStr}</td>
+                <td style="padding: 8px; text-align: right;">€${o.total.toFixed(2)}</td>
+            `;
+            tableBody.appendChild(row);
+            total += o.total;
         });
 
-        const total = todayOrders.reduce((sum, o) => sum + o.total, 0);
-        csv += `"TOTAAL","","${total.toFixed(2)}"\n`;
+        document.getElementById("pdf-total").innerText = total.toFixed(2);
+        document.getElementById("pdf-date").innerText = new Date().toLocaleDateString('nl-NL');
 
-        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `Bestellingen_${new Date().toISOString().split('T')[0]}.csv`;
-        link.click();
+        const element = document.getElementById("pdf-content");
+        const opt = {
+            margin: 10,
+            filename: `Bestelbon_${new Date().toISOString().split('T')[0]}.pdf`,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2 },
+            jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' }
+        };
+        html2pdf().set(opt).from(element).save();
     }
 
     function showModal(content, show) {
