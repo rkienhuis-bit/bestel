@@ -18,10 +18,9 @@
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         .cat-btn.active { background-color: #FF5A5F; color: white; border-color: #FF5A5F; }
         .modal-overlay { background: rgba(0,0,0,0.6); display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 100; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e5e7eb; }
-        th { background: #f3f4f6; font-weight: 600; }
-        input[type="number"], input[type="text"] { padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; }
+        input[type="number"], input[type="text"], input[type="password"] { padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; }
+        .tab-btn { padding: 10px 16px; border: none; background: white; border-bottom: 3px solid transparent; cursor: pointer; font-weight: 600; font-size: 14px; }
+        .tab-btn.active { border-bottom-color: #FF5A5F; color: #FF5A5F; }
     </style>
 </head>
 <body>
@@ -68,50 +67,91 @@
             <button id="back-to-menu-btn" class="text-xs text-white bg-gray-800 px-4 py-2 rounded-full font-bold">Terug</button>
         </div>
 
-        <div class="flex gap-2 mb-4">
-            <button id="tab-orders-btn" class="flex-1 py-2 px-3 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-50">📋 Bestellingen</button>
-            <button id="tab-menu-btn" class="flex-1 py-2 px-3 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-50">📝 Menu</button>
+        <!-- PASSWORD CHECK -->
+        <div id="password-check" class="bg-yellow-50 border border-yellow-200 rounded-2xl p-4 mb-6">
+            <p class="text-sm text-yellow-800 mb-3 font-bold">🔒 Dit is het admin paneel. Voer het wachtwoord in:</p>
+            <input type="password" id="admin-password" placeholder="Wachtwoord" class="w-full p-3 border border-yellow-300 rounded-xl mb-3 text-sm">
+            <button id="unlock-admin-btn" class="w-full bg-yellow-500 text-white py-2 rounded-xl font-bold hover:bg-yellow-600">
+                Ontgrendelen
+            </button>
         </div>
 
-        <!-- ORDERS TAB -->
-        <div id="orders-tab" class="hidden">
-            <button id="export-csv-btn" class="w-full text-xs text-white bg-[#FF5A5F] px-4 py-3 rounded-xl font-bold mb-4">
-                ⬇️ Export Excel
-            </button>
-            <div id="master-list-container" class="space-y-4"></div>
-            <div class="mt-8 p-6 bg-gradient-to-br from-red-50 to-orange-50 rounded-3xl border border-red-100">
-                <div class="flex justify-between items-center">
-                    <span class="text-gray-500 font-bold uppercase text-[10px]">Totaal</span>
-                    <span class="text-4xl font-black text-[#FF5A5F]">€<span id="grand-total">0.00</span></span>
+        <!-- ADMIN CONTENT (Hidden until unlocked) -->
+        <div id="admin-content" class="hidden">
+            <div class="flex gap-2 mb-4 border-b border-gray-200">
+                <button class="tab-btn active" data-tab="orders">📋 Bestellingen</button>
+                <button class="tab-btn" data-tab="products">📝 Producten</button>
+            </div>
+
+            <!-- ORDERS TAB -->
+            <div id="orders-tab" class="tab-content">
+                <button id="export-csv-btn" class="w-full text-xs text-white bg-[#FF5A5F] px-4 py-3 rounded-xl font-bold mb-4">
+                    ⬇️ Export Excel
+                </button>
+                <div id="master-list-container" class="space-y-4"></div>
+                <div class="mt-8 p-6 bg-gradient-to-br from-red-50 to-orange-50 rounded-3xl border border-red-100">
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-500 font-bold uppercase text-[10px]">Totaal</span>
+                        <span class="text-4xl font-black text-[#FF5A5F]">€<span id="grand-total">0.00</span></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PRODUCTS TAB -->
+            <div id="products-tab" class="tab-content hidden">
+                <div class="bg-blue-50 border border-blue-200 rounded-2xl p-4 mb-4">
+                    <p class="text-sm text-blue-800 mb-3">Wijzig hier prijzen en items. Wijzigingen worden direct opgeslagen.</p>
+                    
+                    <div id="menu-editor" class="space-y-6 max-h-96 overflow-y-auto"></div>
+
+                    <button id="add-item-btn" class="mt-6 w-full py-3 bg-green-500 text-white font-bold rounded-xl hover:bg-green-600">
+                        + Nieuw Item
+                    </button>
                 </div>
             </div>
         </div>
+    </div>
 
-        <!-- MENU EDIT TAB -->
-        <div id="menu-tab" class="hidden">
-            <div class="bg-blue-50 border border-blue-200 rounded-2xl p-4 mb-4">
-                <p class="text-sm text-blue-800 mb-3">Wijzig hier prijzen en items. Wijzigingen worden direct opgeslagen.</p>
-                
-                <div id="menu-editor" class="space-y-6"></div>
+    <!-- CART EDIT SCREEN -->
+    <div id="cart-edit-screen" class="hidden">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-2xl font-black">Jouw Bestelling Aanpassen</h2>
+            <button id="back-to-menu-from-cart-btn" class="text-xs text-white bg-gray-800 px-4 py-2 rounded-full font-bold">Terug</button>
+        </div>
 
-                <button id="add-item-btn" class="mt-6 w-full py-3 bg-green-500 text-white font-bold rounded-xl hover:bg-green-600">
-                    + Nieuw Item
-                </button>
+        <div id="cart-edit-container" class="space-y-3 mb-6"></div>
+
+        <div class="p-6 bg-gradient-to-br from-red-50 to-orange-50 rounded-3xl border border-red-100 mb-4">
+            <div class="flex justify-between items-center">
+                <span class="text-gray-500 font-bold uppercase text-[10px]">Totaal</span>
+                <span class="text-4xl font-black text-[#FF5A5F]">€<span id="cart-edit-total">0.00</span></span>
             </div>
         </div>
+
+        <button id="confirm-order-btn" class="w-full bg-[#FF5A5F] text-white py-4 rounded-2xl font-black text-lg hover:bg-[#FF3E46] mb-3">
+            Bestelling Bevestigen
+        </button>
+        <button id="cancel-order-btn" class="w-full bg-gray-200 text-gray-700 py-3 rounded-2xl font-bold hover:bg-gray-300">
+            Annuleren
+        </button>
     </div>
 </div>
 
-<!-- CART -->
+<!-- CART FOOTER -->
 <div id="cart-footer" class="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-gray-100 p-5 shadow-2xl hidden z-50">
-    <div class="container mx-auto max-w-md flex justify-between items-center">
+    <div class="container mx-auto max-w-md flex justify-between items-center gap-4">
         <div>
             <div class="text-[10px] text-gray-400 font-black uppercase">Totaal</div>
             <div class="text-3xl font-black text-[#FF5A5F]">€<span id="total-price">0.00</span></div>
         </div>
-        <button id="send-btn" class="bg-[#FF5A5F] text-white px-8 py-4 rounded-2xl font-black shadow-lg hover:bg-[#FF3E46]">
-            Bestellen
-        </button>
+        <div class="flex gap-2">
+            <button id="edit-cart-btn" class="bg-gray-500 text-white px-6 py-4 rounded-2xl font-black shadow-lg hover:bg-gray-600">
+                ✏️ Wijzig
+            </button>
+            <button id="send-btn" class="bg-[#FF5A5F] text-white px-6 py-4 rounded-2xl font-black shadow-lg hover:bg-[#FF3E46]">
+                Bestellen
+            </button>
+        </div>
     </div>
 </div>
 
@@ -124,7 +164,7 @@
 </div>
 
 <script>
-    // ========== MENU DATA (Compleet menu van PDF) ==========
+    // ========== MENU DATA ==========
     let menuData = [
         {
             category: "Patat",
@@ -315,10 +355,12 @@
     let currentUser = localStorage.getItem("spechtUser") || "";
     let cart = [];
     let orders = JSON.parse(localStorage.getItem("spechtOrders") || "[]");
+    let adminUnlocked = false;
     let currentCategory = "All";
     let nextId = 2000;
 
-    // Load menu from localStorage
+    const ADMIN_PASSWORD = "Specht";
+
     function loadMenuData() {
         const saved = localStorage.getItem("spechtMenuData");
         if (saved) {
@@ -342,13 +384,29 @@
     };
     document.getElementById("toggle-admin-btn").onclick = showAdmin;
     document.getElementById("back-to-menu-btn").onclick = showMenu;
+    document.getElementById("back-to-menu-from-cart-btn").onclick = backToMenu;
     document.getElementById("menu-search").oninput = renderMenu;
     document.getElementById("send-btn").onclick = submitOrder;
     document.getElementById("modal-close").onclick = closeModal;
     document.getElementById("export-csv-btn").onclick = exportCSV;
-    document.getElementById("tab-orders-btn").onclick = () => showAdminTab("orders");
-    document.getElementById("tab-menu-btn").onclick = () => showAdminTab("menu");
+    document.getElementById("edit-cart-btn").onclick = editCart;
+    document.getElementById("confirm-order-btn").onclick = submitOrder;
+    document.getElementById("cancel-order-btn").onclick = backToMenu;
+    document.getElementById("unlock-admin-btn").onclick = unlockAdmin;
     document.getElementById("add-item-btn").onclick = addNewItem;
+
+    // Tab switching
+    document.querySelectorAll(".tab-btn").forEach(btn => {
+        btn.onclick = (e) => {
+            document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+            document.querySelectorAll(".tab-content").forEach(c => c.classList.add("hidden"));
+            e.target.classList.add("active");
+            const tab = e.target.dataset.tab;
+            document.getElementById(tab + "-tab").classList.remove("hidden");
+            if (tab === "orders") renderAdmin();
+            if (tab === "products") renderMenuEditor();
+        };
+    });
 
     function saveName() {
         const name = document.getElementById("username").value.trim();
@@ -428,36 +486,111 @@
         renderMenu();
     }
 
+    function editCart() {
+        document.getElementById("menu-screen").classList.add("hidden");
+        document.getElementById("admin-screen").classList.add("hidden");
+        document.getElementById("cart-edit-screen").classList.remove("hidden");
+        document.getElementById("cart-footer").classList.add("hidden");
+        renderCartEdit();
+    }
+
+    function renderCartEdit() {
+        const container = document.getElementById("cart-edit-container");
+        container.innerHTML = "";
+
+        const grouped = cart.reduce((acc, item) => {
+            const existing = acc.find(g => g.id === item.id);
+            if (existing) {
+                existing.count++;
+            } else {
+                acc.push({ ...item, count: 1 });
+            }
+            return acc;
+        }, []);
+
+        grouped.forEach((item, idx) => {
+            const div = document.createElement("div");
+            div.className = "bg-white p-4 rounded-xl border border-gray-200 flex justify-between items-center";
+            div.innerHTML = `
+                <div class="flex-1">
+                    <h3 class="font-bold text-sm">${item.name}</h3>
+                    <p class="text-xs text-gray-500">€${item.price.toFixed(2)} per stuk</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button class="w-8 h-8 bg-gray-100 rounded-lg font-bold text-gray-600 hover:bg-gray-200">−</button>
+                    <span class="w-6 text-center font-bold">${item.count}</span>
+                    <button class="w-8 h-8 bg-gray-100 rounded-lg font-bold text-gray-600 hover:bg-gray-200">+</button>
+                </div>
+            `;
+
+            const minBtn = div.querySelector("button:first-of-type");
+            const plusBtn = div.querySelector("button:last-of-type");
+
+            minBtn.onclick = () => {
+                cart = cart.filter(c => !(c.id === item.id && cart.indexOf(c) === idx));
+                renderCartEdit();
+                updateUI();
+            };
+
+            plusBtn.onclick = () => {
+                cart.push(item);
+                renderCartEdit();
+                updateUI();
+            };
+
+            container.appendChild(div);
+        });
+
+        document.getElementById("cart-edit-total").innerText = cart.reduce((s, i) => s + i.price, 0).toFixed(2);
+    }
+
+    function backToMenu() {
+        document.getElementById("menu-screen").classList.remove("hidden");
+        document.getElementById("admin-screen").classList.add("hidden");
+        document.getElementById("cart-edit-screen").classList.add("hidden");
+        if (cart.length > 0) document.getElementById("cart-footer").classList.remove("hidden");
+    }
+
     function submitOrder() {
         if (!cart.length) return;
+        
+        const total = cart.reduce((s, i) => s + i.price, 0);
         orders.push({
             user: currentUser,
             items: cart,
-            total: cart.reduce((s, i) => s + i.price, 0),
+            total: total,
             date: new Date().toISOString()
         });
+        
         localStorage.setItem("spechtOrders", JSON.stringify(orders));
+        
         showModal('🍟 <h2 class="text-xl font-bold mt-2">Smakelijk!</h2><p class="text-gray-400 text-sm">Bestelling opgeslagen.</p>', true);
         cart = [];
+        document.getElementById("cart-edit-screen").classList.add("hidden");
         updateUI();
+        backToMenu();
     }
 
     function showAdmin() {
+        adminUnlocked = false;
         document.getElementById("menu-screen").classList.add("hidden");
         document.getElementById("admin-screen").classList.remove("hidden");
         document.getElementById("cart-footer").classList.add("hidden");
-        showAdminTab("orders");
+        document.getElementById("admin-content").classList.add("hidden");
+        document.getElementById("password-check").classList.remove("hidden");
     }
 
-    function showAdminTab(tab) {
-        document.getElementById("orders-tab").classList.add("hidden");
-        document.getElementById("menu-tab").classList.add("hidden");
-        document.getElementById(tab + "-tab").classList.remove("hidden");
-        document.getElementById("tab-orders-btn").classList.toggle("bg-[#FF5A5F] text-white", tab === "orders");
-        document.getElementById("tab-menu-btn").classList.toggle("bg-[#FF5A5F] text-white", tab === "menu");
-        
-        if (tab === "orders") renderAdmin();
-        if (tab === "menu") renderMenuEditor();
+    function unlockAdmin() {
+        const password = document.getElementById("admin-password").value;
+        if (password === ADMIN_PASSWORD) {
+            adminUnlocked = true;
+            document.getElementById("password-check").classList.add("hidden");
+            document.getElementById("admin-content").classList.remove("hidden");
+            renderAdmin();
+        } else {
+            showModal('❌ Verkeerd wachtwoord', true);
+            document.getElementById("admin-password").value = "";
+        }
     }
 
     function showMenu() {
@@ -479,33 +612,24 @@
         
         list.innerHTML = "";
         let total = 0;
-        todayOrders.forEach((o, idx) => {
+        
+        todayOrders.forEach((o) => {
             total += o.total;
             const counts = o.items.reduce((a, c) => { a[c.name] = (a[c.name] || 0) + 1; return a; }, {});
+            const itemsStr = Object.entries(counts).map(([n, c]) => `${c}x ${n}`).join(", ");
+            
             const card = document.createElement("div");
-            card.className = "bg-white p-6 rounded-3xl border border-gray-100";
+            card.className = "bg-white p-4 rounded-xl border border-gray-200";
             card.innerHTML = `
-                <div class="flex justify-between items-center mb-2">
-                    <span class="font-black text-gray-800">${o.user}</span>
-                    <span class="font-black text-[#FF5A5F]">€${o.total.toFixed(2)}</span>
-                </div>
-                <div class="text-[11px] text-gray-500">
-                    ${Object.entries(counts).map(([n, c]) => `<div>${c}x ${n}</div>`).join("")}
+                <div class="grid grid-cols-3 gap-2 text-sm">
+                    <div class="font-bold">${o.user}</div>
+                    <div class="text-gray-600">${itemsStr}</div>
+                    <div class="font-black text-[#FF5A5F] text-right">€${o.total.toFixed(2)}</div>
                 </div>
             `;
-            if (o.user === currentUser) {
-                const delBtn = document.createElement("button");
-                delBtn.className = "mt-3 text-[9px] font-black text-red-300 hover:text-red-500";
-                delBtn.innerText = "Verwijderen";
-                delBtn.onclick = () => {
-                    orders.splice(orders.indexOf(o), 1);
-                    localStorage.setItem("spechtOrders", JSON.stringify(orders));
-                    renderAdmin();
-                };
-                card.appendChild(delBtn);
-            }
             list.appendChild(card);
         });
+        
         document.getElementById("grand-total").innerText = total.toFixed(2);
     }
 
@@ -517,17 +641,18 @@
             const catDiv = document.createElement("div");
             catDiv.className = "bg-white p-4 rounded-xl border border-gray-200";
             
-            let html = `<h3 class="font-bold mb-3">${cat.category}</h3>`;
+            let html = `<h3 class="font-bold mb-3 text-gray-800">${cat.category}</h3>`;
             html += '<div class="space-y-2">';
             
             cat.items.forEach((item, itemIdx) => {
                 html += `
-                    <div class="flex gap-2 items-center">
-                        <input type="text" value="${item.name}" class="flex-1 text-sm px-2 py-1" 
-                            onchange="updateItemName(${catIdx}, ${itemIdx}, this.value)">
-                        <input type="number" value="${item.price}" step="0.01" class="w-20 text-sm px-2 py-1" 
-                            onchange="updateItemPrice(${catIdx}, ${itemIdx}, parseFloat(this.value))">
-                        <button class="text-xs text-red-400 font-bold" onclick="deleteItem(${catIdx}, ${itemIdx})">Del</button>
+                    <div class="flex gap-2 items-center text-sm">
+                        <input type="text" value="${item.name}" class="flex-1 px-2 py-1 border border-gray-300 rounded" 
+                            onchange="window.updateItemName(${catIdx}, ${itemIdx}, this.value)">
+                        <input type="number" value="${item.price}" step="0.01" class="w-24 px-2 py-1 border border-gray-300 rounded" 
+                            onchange="window.updateItemPrice(${catIdx}, ${itemIdx}, parseFloat(this.value))">
+                        <button class="text-xs text-red-500 font-bold px-2 py-1 hover:bg-red-50 rounded" 
+                            onclick="window.deleteItem(${catIdx}, ${itemIdx})">×</button>
                     </div>
                 `;
             });
@@ -538,23 +663,23 @@
         });
     }
 
-    function updateItemName(catIdx, itemIdx, name) {
+    window.updateItemName = function(catIdx, itemIdx, name) {
         menuData[catIdx].items[itemIdx].name = name;
         saveMenuData();
-    }
+    };
 
-    function updateItemPrice(catIdx, itemIdx, price) {
+    window.updateItemPrice = function(catIdx, itemIdx, price) {
         menuData[catIdx].items[itemIdx].price = price;
         saveMenuData();
-    }
+    };
 
-    function deleteItem(catIdx, itemIdx) {
+    window.deleteItem = function(catIdx, itemIdx) {
         if (confirm("Verwijderen?")) {
             menuData[catIdx].items.splice(itemIdx, 1);
             saveMenuData();
             renderMenuEditor();
         }
-    }
+    };
 
     function addNewItem() {
         const catName = prompt("Categorie naam:");
@@ -581,33 +706,16 @@
         }
 
         let csv = "\uFEFF";
-        csv += "TOTAALLIJST\n";
-        csv += "Aantal,Product\n";
-        
-        let itemCounts = {};
-        todayOrders.forEach(o => {
-            o.items.forEach(i => {
-                itemCounts[i.name] = (itemCounts[i.name] || 0) + 1;
-            });
-        });
-        
-        Object.entries(itemCounts)
-            .sort((a, b) => b[1] - a[1])
-            .forEach(([name, count]) => {
-                csv += `"${count}","${name}"\n`;
-            });
-
-        csv += "\n\nBESTELLINGEN PER PERSOON\n";
         csv += "Naam,Bestelling,Bedrag\n";
         
         todayOrders.forEach(o => {
             const counts = o.items.reduce((a, c) => { a[c.name] = (a[c.name] || 0) + 1; return a; }, {});
-            const itemsStr = Object.entries(counts).map(([n, c]) => `${c}x ${n}`).join(" + ");
-            csv += `"${o.user}","${itemsStr}","€${o.total.toFixed(2)}"\n`;
+            const itemsStr = Object.entries(counts).map(([n, c]) => `${c}x ${n}`).join(", ");
+            csv += `"${o.user}","${itemsStr}","${o.total.toFixed(2)}"\n`;
         });
 
         const total = todayOrders.reduce((sum, o) => sum + o.total, 0);
-        csv += `\n"TOTAAL",,"€${total.toFixed(2)}"\n`;
+        csv += `"TOTAAL","","${total.toFixed(2)}"\n`;
 
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
