@@ -6,7 +6,7 @@
     <title>De Specht - Lunch Bestellen & Beheren</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -229,20 +229,7 @@
     </div>
 </div>
 
-<!-- PDF EXPORT CONTENT -->
-<div id="pdf-export-area" style="display: none; background: white; padding: 40px; font-family: Arial, sans-serif;">
-    <div style="text-align: center; margin-bottom: 40px;">
-        <h1 style="font-size: 28px; font-weight: bold; margin: 0;">De Specht 🍟</h1>
-        <p style="font-size: 13px; margin: 8px 0;">Bestelbon</p>
-        <p style="font-size: 11px; color: #666;" id="pdf-export-date"></p>
-    </div>
-
-    <div id="pdf-export-body" style="margin: 20px 0; font-size: 12px;"></div>
-
-    <div style="text-align: right; margin-top: 30px; padding-top: 15px; border-top: 2px solid #333;">
-        <p style="font-size: 16px; font-weight: bold; margin: 0;">Totaal: €<span id="pdf-export-total">0.00</span></p>
-    </div>
-</div>
+<!-- PDF EXPORT (not needed - using jsPDF directly) -->
 
 <script>
     // Set PDF.js worker
@@ -991,39 +978,79 @@
             return;
         }
 
-        // Build HTML rows
-        const bodyContainer = document.getElementById("pdf-export-body");
-        bodyContainer.innerHTML = "";
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        let yPos = 20;
+        const pageWidth = doc.internal.pageSize.getWidth();
+        
+        // Header
+        doc.setFontSize(24);
+        doc.text("De Specht 🍟", pageWidth / 2, yPos, { align: "center" });
+        yPos += 10;
+        
+        doc.setFontSize(11);
+        doc.text("Bestelbon", pageWidth / 2, yPos, { align: "center" });
+        yPos += 8;
+        
+        doc.setFontSize(9);
+        doc.setTextColor(100);
+        doc.text(new Date().toLocaleDateString('nl-NL'), pageWidth / 2, yPos, { align: "center" });
+        doc.setTextColor(0);
+        yPos += 15;
+        
+        // Table header
+        doc.setFontSize(10);
+        doc.setFont(undefined, 'bold');
+        doc.text("Naam", 15, yPos);
+        doc.text("Bestelling", 50, yPos);
+        doc.text("Bedrag", pageWidth - 20, yPos, { align: "right" });
+        yPos += 7;
+        
+        doc.setLineWidth(0.5);
+        doc.line(15, yPos, pageWidth - 15, yPos);
+        yPos += 5;
+        
+        // Table rows
+        doc.setFont(undefined, 'normal');
+        doc.setFontSize(10);
         let total = 0;
-
+        
         todayOrders.forEach(o => {
             const counts = o.items.reduce((a, c) => { a[c.name] = (a[c.name] || 0) + 1; return a; }, {});
             const itemsStr = Object.entries(counts).map(([n, c]) => `${c}x ${n}`).join(", ");
             
-            const row = document.createElement("div");
-            row.style.cssText = "display: grid; grid-template-columns: 1fr 2fr 1fr; gap: 15px; padding: 10px 0; border-bottom: 1px solid #eee;";
-            row.innerHTML = `
-                <div style="font-weight: bold;">${o.user}</div>
-                <div>${itemsStr}</div>
-                <div style="text-align: right; font-weight: bold;">€${o.total.toFixed(2)}</div>
-            `;
-            bodyContainer.appendChild(row);
+            // Handle long item strings
+            const itemsLines = doc.splitTextToSize(itemsStr, 80);
+            const lineHeight = itemsLines.length * 5;
+            
+            doc.text(o.user, 15, yPos);
+            doc.text(itemsLines, 50, yPos);
+            doc.text(`€${o.total.toFixed(2)}`, pageWidth - 20, yPos, { align: "right" });
+            
+            yPos += Math.max(7, lineHeight);
             total += o.total;
+            
+            // Check if we need a new page
+            if (yPos > 250) {
+                doc.addPage();
+                yPos = 20;
+            }
         });
-
-        document.getElementById("pdf-export-total").innerText = total.toFixed(2);
-        document.getElementById("pdf-export-date").innerText = new Date().toLocaleDateString('nl-NL');
-
-        // Export to PDF
-        const element = document.getElementById("pdf-export-area");
-        const opt = {
-            margin: 10,
-            filename: `Bestelbon_${new Date().toISOString().split('T')[0]}.pdf`,
-            image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 2, useCORS: true, allowTaint: true },
-            jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' }
-        };
-        html2pdf().set(opt).from(element).save();
+        
+        // Total
+        yPos += 5;
+        doc.setLineWidth(0.5);
+        doc.line(15, yPos, pageWidth - 15, yPos);
+        yPos += 8;
+        
+        doc.setFont(undefined, 'bold');
+        doc.setFontSize(12);
+        doc.text("Totaal: ", 15, yPos);
+        doc.text(`€${total.toFixed(2)}`, pageWidth - 20, yPos, { align: "right" });
+        
+        // Save
+        doc.save(`Bestelbon_${new Date().toISOString().split('T')[0]}.pdf`);
     }
 
     function showModal(content, show) {
