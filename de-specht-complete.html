@@ -26,6 +26,17 @@
         .order-card { background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 12px; margin-bottom: 8px; }
         .price-change { background: #FEF3C7; border: 1px solid #FCD34D; border-radius: 8px; padding: 12px; margin-bottom: 8px; }
         .price-change.new { background: #DBEAFE; border-color: #93C5FD; }
+        
+        /* PDF Styles */
+        @media print {
+            body { margin: 0; padding: 0; }
+            .pdf-hide { display: none !important; }
+        }
+        .pdf-section { background: white; padding: 20px; }
+        .pdf-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        .pdf-table th, .pdf-table td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        .pdf-table th { background: #f3f4f6; font-weight: bold; }
+        .pdf-table tr:last-child td { border-bottom: 2px solid #333; }
     </style>
 </head>
 <body>
@@ -38,7 +49,7 @@
 
     <!-- LOGIN -->
     <div id="login-screen" class="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
-        <h2 class="text-xl font-bold mb-4 text-center">Hoe heet je?</h2>
+        <h2 class="text-xl font-bold mb-4 text-center">Vul hier je naam in</h2>
         <input type="text" id="username" class="w-full p-4 border border-gray-200 rounded-2xl mb-4 outline-none focus:ring-2 focus:ring-red-400" placeholder="Jouw Naam">
         <button id="login-btn" class="bg-[#FF5A5F] text-white w-full py-4 rounded-2xl font-bold text-lg hover:bg-[#FF3E46]">
             Start Bestellen
@@ -218,29 +229,29 @@
     </div>
 </div>
 
-<!-- HIDDEN PDF CONTENT FOR EXPORT -->
-<div id="pdf-content" style="display: none; width: 210mm; padding: 20px; background: white;">
-    <div style="text-align: center; margin-bottom: 30px;">
-        <h1 style="font-size: 28px; margin: 0; font-weight: bold;">De Specht 🍟</h1>
-        <p style="font-size: 12px; color: #666; margin: 5px 0;">Bestelbon</p>
+<!-- PDF EXPORT CONTENT -->
+<div id="pdf-export-area" style="display: none;">
+    <div class="pdf-section" style="text-align: center; margin-bottom: 40px;">
+        <h1 style="font-size: 32px; font-weight: bold; margin: 0; color: #222;">De Specht 🍟</h1>
+        <p style="font-size: 14px; color: #666; margin: 10px 0;">Bestelbon</p>
+        <p style="font-size: 12px; color: #999; margin: 5px 0;" id="pdf-export-date"></p>
     </div>
 
-    <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
-        <tr style="border-bottom: 2px solid #333;">
-            <th style="text-align: left; padding: 10px; font-weight: bold;">Naam</th>
-            <th style="text-align: left; padding: 10px; font-weight: bold;">Bestelling</th>
-            <th style="text-align: right; padding: 10px; font-weight: bold;">Bedrag</th>
-        </tr>
-        <tbody id="pdf-table-body"></tbody>
+    <table class="pdf-table">
+        <thead>
+            <tr>
+                <th style="text-align: left;">Naam</th>
+                <th style="text-align: left;">Bestelling</th>
+                <th style="text-align: right;">Bedrag</th>
+            </tr>
+        </thead>
+        <tbody id="pdf-export-body">
+        </tbody>
     </table>
 
-    <div style="text-align: right; padding: 20px; border-top: 2px solid #333; border-bottom: 2px solid #333;">
-        <p style="margin: 0; font-weight: bold; font-size: 18px;">Totaal: €<span id="pdf-total">0.00</span></p>
+    <div style="text-align: right; padding: 20px 0; margin-top: 20px;">
+        <p style="font-size: 18px; font-weight: bold; color: #222; margin: 0;">Totaal: €<span id="pdf-export-total">0.00</span></p>
     </div>
-
-    <p style="text-align: center; font-size: 11px; color: #999; margin-top: 20px;">
-        Bedrukt op: <span id="pdf-date"></span>
-    </p>
 </div>
 
 <script>
@@ -483,8 +494,8 @@
                 fullText += textContent.items.map(item => item.str).join(" ");
             }
 
-            // Parse prices from text
-            const extractedPrices = extractPricesFromText(fullText);
+            // Parse prices by line
+            const extractedPrices = extractPricesByLine(fullText);
             
             if (extractedPrices.length === 0) {
                 showPdfStatus("❌ Geen prijzen gevonden in PDF", "error");
@@ -501,21 +512,26 @@
         }
     }
 
-    function extractPricesFromText(text) {
-        // Regex to find prices (e.g., "2.60", "€2.60", "2,60")
-        const priceRegex = /([A-Z][A-Za-z\s\-']{2,60}?)\s+(?:€\s*)?(\d{1,2}[.,]\d{2})/g;
+    function extractPricesByLine(text) {
+        const lines = text.split(/[\n\r]+/);
         const prices = [];
-        let match;
 
-        while ((match = priceRegex.exec(text)) !== null) {
-            const name = match[1].trim();
-            const priceStr = match[2].replace(",", ".");
-            const price = parseFloat(priceStr);
+        lines.forEach(line => {
+            // Each line format: "Name ... Price"
+            // Match: word characters followed by a price (€2.60 or 2,60 or 2.60)
+            const priceMatch = line.match(/^(.+?)\s+(?:€\s*)?(\d{1,2}[.,]\d{2})\s*$/);
             
-            if (name.length > 2 && name.length < 100 && price > 0) {
-                prices.push({ name, price });
+            if (priceMatch) {
+                let name = priceMatch[1].trim();
+                let priceStr = priceMatch[2].replace(",", ".");
+                let price = parseFloat(priceStr);
+                
+                // Only accept if name is reasonable length and price is valid
+                if (name.length > 2 && name.length < 120 && price > 0 && price < 100) {
+                    prices.push({ name, price });
+                }
             }
-        }
+        });
 
         return prices;
     }
@@ -524,26 +540,20 @@
         pendingPriceChanges = [];
 
         extractedPrices.forEach(extracted => {
-            // Find matching item in menu
-            let found = false;
-            
+            // Find EXACT match in current menu
             menuData.forEach(cat => {
-                cat.items.forEach(item => {
-                    // Fuzzy match on name
-                    if (item.name.toLowerCase().includes(extracted.name.toLowerCase()) ||
-                        extracted.name.toLowerCase().includes(item.name.toLowerCase())) {
-                        
+                cat.items.forEach((item, itemIdx) => {
+                    // Case-insensitive exact match
+                    if (item.name.toLowerCase() === extracted.name.toLowerCase()) {
                         if (Math.abs(item.price - extracted.price) > 0.01) {
                             // Price changed
                             pendingPriceChanges.push({
-                                id: item.id,
                                 catIdx: menuData.indexOf(cat),
-                                itemIdx: cat.items.indexOf(item),
+                                itemIdx: itemIdx,
                                 name: item.name,
                                 oldPrice: item.price,
                                 newPrice: extracted.price
                             });
-                            found = true;
                         }
                     }
                 });
@@ -887,20 +897,32 @@
         list.innerHTML = "";
         let total = 0;
         
-        todayOrders.forEach((o) => {
+        todayOrders.forEach((o, idx) => {
             total += o.total;
             const counts = o.items.reduce((a, c) => { a[c.name] = (a[c.name] || 0) + 1; return a; }, {});
             const itemsStr = Object.entries(counts).map(([n, c]) => `${c}x ${n}`).join(", ");
             
             const card = document.createElement("div");
-            card.className = "order-card";
+            card.className = "order-card flex justify-between items-start";
             card.innerHTML = `
-                <div class="grid grid-cols-3 gap-2 text-sm">
-                    <div class="font-bold">${o.user}</div>
-                    <div class="text-gray-600">${itemsStr}</div>
-                    <div class="font-black text-[#FF5A5F] text-right">€${o.total.toFixed(2)}</div>
+                <div class="flex-1">
+                    <div class="grid grid-cols-3 gap-2 text-sm">
+                        <div class="font-bold">${o.user}</div>
+                        <div class="text-gray-600">${itemsStr}</div>
+                        <div class="font-black text-[#FF5A5F] text-right">€${o.total.toFixed(2)}</div>
+                    </div>
                 </div>
+                <button class="ml-2 text-xs text-red-400 font-bold hover:text-red-600">×</button>
             `;
+            
+            card.querySelector("button").onclick = () => {
+                if (confirm(`${o.user} uit de lijst verwijderen?`)) {
+                    orders = orders.filter((order, i) => i !== orders.indexOf(o));
+                    localStorage.setItem("spechtOrders", JSON.stringify(orders));
+                    renderAdminOrders();
+                }
+            };
+            
             list.appendChild(card);
         });
         
@@ -979,7 +1001,8 @@
             return;
         }
 
-        const tableBody = document.getElementById("pdf-table-body");
+        // Build table
+        const tableBody = document.getElementById("pdf-export-body");
         tableBody.innerHTML = "";
         let total = 0;
 
@@ -987,26 +1010,25 @@
             const counts = o.items.reduce((a, c) => { a[c.name] = (a[c.name] || 0) + 1; return a; }, {});
             const itemsStr = Object.entries(counts).map(([n, c]) => `${c}x ${n}`).join(", ");
             
-            const row = document.createElement("tr");
-            row.style.borderBottom = "1px solid #ddd";
-            row.innerHTML = `
-                <td style="padding: 8px; text-align: left;">${o.user}</td>
-                <td style="padding: 8px; text-align: left;">${itemsStr}</td>
-                <td style="padding: 8px; text-align: right;">€${o.total.toFixed(2)}</td>
-            `;
-            tableBody.appendChild(row);
+            const row = tableBody.insertRow();
+            row.insertCell(0).textContent = o.user;
+            row.insertCell(1).textContent = itemsStr;
+            row.insertCell(2).textContent = `€${o.total.toFixed(2)}`;
+            row.cells[2].style.textAlign = "right";
+            
             total += o.total;
         });
 
-        document.getElementById("pdf-total").innerText = total.toFixed(2);
-        document.getElementById("pdf-date").innerText = new Date().toLocaleDateString('nl-NL');
+        document.getElementById("pdf-export-total").innerText = total.toFixed(2);
+        document.getElementById("pdf-export-date").innerText = new Date().toLocaleDateString('nl-NL');
 
-        const element = document.getElementById("pdf-content");
+        // Export
+        const element = document.getElementById("pdf-export-area");
         const opt = {
             margin: 10,
             filename: `Bestelbon_${new Date().toISOString().split('T')[0]}.pdf`,
             image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 2 },
+            html2canvas: { scale: 2, logging: false },
             jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' }
         };
         html2pdf().set(opt).from(element).save();
