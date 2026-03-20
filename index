@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lunch App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #F7F7F9; margin: 0; }
+        .restaurant-card { background: white; border-radius: 20px; padding: 22px 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.07); border: 1px solid #f0f0f0; transition: transform 0.18s, box-shadow 0.18s; cursor: pointer; text-decoration: none; display: block; }
+        .restaurant-card:hover:not(.closed) { transform: translateY(-4px); box-shadow: 0 10px 24px rgba(0,0,0,0.13); }
+        .restaurant-card.closed { opacity: 0.45; cursor: not-allowed; }
+        .day-btn { font-size: 10px; font-weight: 700; padding: 5px 2px; border-radius: 7px; border: 2px solid; transition: all 0.1s; cursor: pointer; }
+        .day-btn.open { background: #dcfce7; color: #15803d; border-color: #86efac; }
+        .day-btn.closed-day { background: #fee2e2; color: #dc2626; border-color: #fca5a5; }
+        .day-btn.today { ring: 2px; outline: 2px solid #374151; outline-offset: 2px; }
+        .modal-overlay { background: rgba(0,0,0,0.55); display: none; position: fixed; top:0; left:0; right:0; bottom:0; z-index:100; align-items:center; justify-content:center; backdrop-filter:blur(4px); }
+        .modal-overlay.show { display: flex; }
+    </style>
+</head>
+<body class="min-h-screen">
+
+<div class="container mx-auto max-w-md p-5 pb-20">
+    <div class="text-center mb-8 pt-6">
+        <h1 class="text-4xl font-black mb-1">🍽️ Lunch</h1>
+        <p id="today-label" class="text-gray-400 text-sm font-semibold"></p>
+    </div>
+
+    <button id="admin-btn" class="fixed top-5 right-5 text-2xl opacity-60 hover:opacity-100 transition-opacity">⚙️</button>
+
+    <div id="restaurants-grid" class="space-y-4"></div>
+
+    <p id="all-closed-msg" class="hidden text-center text-gray-400 text-sm mt-10 py-8">
+        Vandaag zijn alle eetgelegenheden gesloten.
+    </p>
+</div>
+
+<!-- ADMIN MODAL -->
+<div id="admin-modal" class="modal-overlay">
+    <div class="bg-white rounded-3xl w-full max-w-sm mx-4 shadow-2xl overflow-hidden">
+        <div class="p-6 border-b border-gray-100 flex justify-between items-center">
+            <h2 class="text-xl font-black">Beschikbaarheid Beheren</h2>
+            <button id="close-modal-btn" class="text-gray-400 hover:text-gray-600 text-2xl font-bold">×</button>
+        </div>
+        <div id="admin-password-section" class="p-6">
+            <p class="text-sm text-gray-500 mb-4">Voer het beheerderswachtwoord in om de beschikbaarheid per dag te beheren.</p>
+            <input type="password" id="admin-pw-input" placeholder="Wachtwoord" class="w-full p-3 border border-gray-200 rounded-xl mb-3 text-sm outline-none focus:ring-2 focus:ring-red-300">
+            <button id="admin-pw-btn" class="w-full bg-gray-800 text-white py-3 rounded-xl font-bold hover:bg-gray-900">Doorgaan</button>
+            <p id="pw-error" class="text-red-500 text-xs mt-2 hidden">Verkeerd wachtwoord</p>
+        </div>
+        <div id="admin-schedule-section" class="p-6 hidden max-h-[70vh] overflow-y-auto">
+            <p class="text-xs text-gray-400 font-bold mb-4">Klik op een dag om open/gesloten te wisselen. Vandaag heeft een rand.</p>
+            <div id="schedule-grid" class="space-y-5"></div>
+            <div class="mt-6 pt-4 border-t border-gray-100">
+                <p class="text-xs text-gray-400 mb-2 font-semibold">RESTAURANT TOEVOEGEN</p>
+                <div class="flex gap-2">
+                    <input type="text" id="new-restaurant-name" placeholder="Naam" class="flex-1 p-2 border border-gray-200 rounded-lg text-sm outline-none">
+                    <input type="text" id="new-restaurant-file" placeholder="bestandsnaam" class="w-28 p-2 border border-gray-200 rounded-lg text-sm outline-none">
+                    <button id="add-restaurant-btn" class="bg-green-500 text-white px-3 py-2 rounded-lg font-bold text-sm hover:bg-green-600">+</button>
+                </div>
+                <p class="text-[10px] text-gray-400 mt-1">Bestandsnaam zonder .html, bijv: <em>vistaria</em></p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const ADMIN_PASSWORD = "Ipex26";
+    const DAY_NAMES_SHORT = ["Ma","Di","Wo","Do","Vr","Za","Zo"];
+    const DAY_NAMES_FULL  = ["Maandag","Dinsdag","Woensdag","Donderdag","Vrijdag","Zaterdag","Zondag"];
+
+    // todayIdx: 0=Ma … 6=Zo
+    const jsDay = new Date().getDay();
+    const todayIdx = jsDay === 0 ? 6 : jsDay - 1;
+
+    // ===== RESTAURANT CONFIG =====
+    // schedule: array[7], 0=open 1=gesloten (Ma-Zo)
+    const DEFAULT_RESTAURANTS = [
+        { id: "specht",       name: "De Specht",        address: "Goor",   emoji: "🍟", file: "specht.html",       schedule: [0,0,0,0,0,1,1] },
+        { id: "vistaria",     name: "Vistaria Enter",   address: "Enter",  emoji: "🐟", file: "vistaria.html",     schedule: [0,0,0,0,0,1,1] },
+        { id: "kebab-ehran",  name: "Kebab van Ehran",  address: "Enter",  emoji: "🥙", file: "kebab-ehran.html",  schedule: [0,0,0,0,0,1,1] }
+    ];
+
+    function loadRestaurants() {
+        const saved = localStorage.getItem("lunchHubRestaurants");
+        return saved ? JSON.parse(saved) : DEFAULT_RESTAURANTS;
+    }
+    function saveRestaurants(list) {
+        localStorage.setItem("lunchHubRestaurants", JSON.stringify(list));
+    }
+
+    let restaurants = loadRestaurants();
+
+    // ===== RENDER HOME =====
+    function render() {
+        const grid = document.getElementById("restaurants-grid");
+        grid.innerHTML = "";
+
+        // Today label
+        const today = new Date();
+        document.getElementById("today-label").textContent =
+            today.toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "long" });
+
+        let anyOpen = false;
+
+        restaurants.forEach(r => {
+            const isOpen = r.schedule[todayIdx] === 0;
+            if (isOpen) anyOpen = true;
+
+            const a = document.createElement("a");
+            a.href = isOpen ? r.file : "#";
+            a.className = `restaurant-card ${isOpen ? "" : "closed"}`;
+            a.onclick = isOpen ? null : (e) => e.preventDefault();
+
+            a.innerHTML = `
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <span class="text-3xl">${r.emoji}</span>
+                        <div>
+                            <h3 class="font-black text-gray-900 text-base leading-tight">${r.name}</h3>
+                            <p class="text-xs text-gray-400 font-medium">${r.address}</p>
+                        </div>
+                    </div>
+                    <div class="flex flex-col items-end gap-1">
+                        <span class="text-xs font-bold px-3 py-1 rounded-full ${isOpen ? "bg-green-100 text-green-700" : "bg-red-100 text-red-500"}">
+                            ${isOpen ? "Open ✓" : "Gesloten"}
+                        </span>
+                        <span class="text-gray-300 text-sm">${isOpen ? "→" : ""}</span>
+                    </div>
+                </div>
+            `;
+            grid.appendChild(a);
+        });
+
+        document.getElementById("all-closed-msg").classList.toggle("hidden", anyOpen);
+    }
+
+    // ===== ADMIN MODAL =====
+    document.getElementById("admin-btn").onclick = () => {
+        document.getElementById("admin-modal").classList.add("show");
+        document.getElementById("admin-pw-input").value = "";
+        document.getElementById("pw-error").classList.add("hidden");
+        document.getElementById("admin-password-section").classList.remove("hidden");
+        document.getElementById("admin-schedule-section").classList.add("hidden");
+    };
+    document.getElementById("close-modal-btn").onclick = () => {
+        document.getElementById("admin-modal").classList.remove("show");
+    };
+    document.getElementById("admin-modal").onclick = (e) => {
+        if (e.target === document.getElementById("admin-modal")) {
+            document.getElementById("admin-modal").classList.remove("show");
+        }
+    };
+
+    document.getElementById("admin-pw-btn").onclick = checkPassword;
+    document.getElementById("admin-pw-input").onkeydown = (e) => { if (e.key === "Enter") checkPassword(); };
+
+    function checkPassword() {
+        const val = document.getElementById("admin-pw-input").value;
+        if (val === ADMIN_PASSWORD) {
+            document.getElementById("admin-password-section").classList.add("hidden");
+            document.getElementById("admin-schedule-section").classList.remove("hidden");
+            renderScheduleGrid();
+        } else {
+            document.getElementById("pw-error").classList.remove("hidden");
+            document.getElementById("admin-pw-input").value = "";
+        }
+    }
+
+    function renderScheduleGrid() {
+        const grid = document.getElementById("schedule-grid");
+        grid.innerHTML = "";
+
+        restaurants.forEach((r, rIdx) => {
+            const div = document.createElement("div");
+            div.innerHTML = `
+                <div class="flex items-center justify-between mb-2">
+                    <span class="font-bold text-sm">${r.emoji} ${r.name}</span>
+                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${r.schedule[todayIdx] === 0 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"}">
+                        Vandaag: ${r.schedule[todayIdx] === 0 ? "Open" : "Gesloten"}
+                    </span>
+                </div>
+            `;
+
+            const daysRow = document.createElement("div");
+            daysRow.className = "grid grid-cols-7 gap-1";
+
+            DAY_NAMES_SHORT.forEach((day, dIdx) => {
+                const isOpen = r.schedule[dIdx] === 0;
+                const isToday = dIdx === todayIdx;
+                const btn = document.createElement("button");
+                btn.className = `day-btn ${isOpen ? "open" : "closed-day"} ${isToday ? "today" : ""}`;
+                btn.title = DAY_NAMES_FULL[dIdx];
+                btn.textContent = day;
+                btn.onclick = () => {
+                    restaurants[rIdx].schedule[dIdx] = restaurants[rIdx].schedule[dIdx] === 0 ? 1 : 0;
+                    saveRestaurants(restaurants);
+                    renderScheduleGrid();
+                    render();
+                };
+                daysRow.appendChild(btn);
+            });
+
+            div.appendChild(daysRow);
+            grid.appendChild(div);
+        });
+    }
+
+    // ===== ADD RESTAURANT =====
+    document.getElementById("add-restaurant-btn").onclick = () => {
+        const name = document.getElementById("new-restaurant-name").value.trim();
+        const file = document.getElementById("new-restaurant-file").value.trim();
+        if (!name || !file) { alert("Vul naam én bestandsnaam in."); return; }
+
+        restaurants.push({
+            id: file,
+            name: name,
+            address: "",
+            emoji: "🍽️",
+            file: file + ".html",
+            schedule: [0,0,0,0,0,1,1]
+        });
+        saveRestaurants(restaurants);
+        document.getElementById("new-restaurant-name").value = "";
+        document.getElementById("new-restaurant-file").value = "";
+        renderScheduleGrid();
+        render();
+    };
+
+    // ===== INIT =====
+    render();
+</script>
+</body>
+</html>
