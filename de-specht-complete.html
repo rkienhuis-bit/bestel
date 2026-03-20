@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lunch App - Bestellen bij Restaurants</title>
+    <title>De Specht - Lunch Bestellen & Beheren</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -26,50 +26,42 @@
         .order-card { background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 12px; margin-bottom: 8px; }
         .price-change { background: #FEF3C7; border: 1px solid #FCD34D; border-radius: 8px; padding: 12px; margin-bottom: 8px; }
         .price-change.new { background: #DBEAFE; border-color: #93C5FD; }
-        .restaurant-card { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; }
-        .restaurant-card:hover { transform: translateY(-4px); box-shadow: 0 8px 16px rgba(0,0,0,0.15); }
-        .restaurant-card h3 { margin: 0 0 8px 0; font-size: 18px; font-weight: bold; }
-        .restaurant-card p { margin: 0; color: #666; font-size: 13px; }
+        
+        /* PDF Styles */
+        @media print {
+            body { margin: 0; padding: 0; }
+            .pdf-hide { display: none !important; }
+        }
+        .pdf-section { background: white; padding: 20px; }
+        .pdf-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        .pdf-table th, .pdf-table td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        .pdf-table th { background: #f3f4f6; font-weight: bold; }
+        .pdf-table tr:last-child td { border-bottom: 2px solid #333; }
     </style>
 </head>
 <body>
 
 <div class="container mx-auto max-w-md p-5">
-    <!-- HOME SCREEN (Restaurant Selection) -->
-    <div id="home-screen" class="hidden">
-        <div class="text-center mb-8 pt-4">
-            <h1 class="text-3xl font-black mb-2">Lunch App</h1>
-            <p class="text-gray-500 font-medium text-sm">Kies waar je wil eten</p>
-        </div>
-
-        <button id="admin-home-btn" class="fixed top-5 right-5 text-xs text-gray-400 hover:text-gray-600 font-bold">⚙️</button>
-
-        <div id="restaurants-grid" class="space-y-3 mb-4"></div>
+    <div class="text-center mb-6 pt-4">
+        <h1 class="text-3xl font-black mb-2">De Specht 🍟</h1>
+        <p id="greeting" class="text-gray-500 font-medium text-sm">Wat wil je eten?</p>
     </div>
 
-    <!-- GLOBAL ADMIN SCREEN -->
-    <div id="global-admin-screen" class="hidden">
-        <div class="flex justify-between items-center mb-6">
-            <h2 class="text-2xl font-black">Globaal Beheer</h2>
-            <button id="back-from-global-admin-btn" class="text-xs text-white bg-gray-800 px-4 py-2 rounded-full font-bold">Terug</button>
-        </div>
-
-        <div id="global-admin-content"></div>
+    <!-- LOGIN -->
+    <div id="login-screen" class="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
+        <h2 class="text-xl font-bold mb-4 text-center">Hoe heet je?</h2>
+        <input type="text" id="username" class="w-full p-4 border border-gray-200 rounded-2xl mb-4 outline-none focus:ring-2 focus:ring-red-400" placeholder="Jouw Naam">
+        <button id="login-btn" class="bg-[#FF5A5F] text-white w-full py-4 rounded-2xl font-bold text-lg hover:bg-[#FF3E46]">
+            Start Bestellen
+        </button>
     </div>
 
-    <!-- MENU SCREEN (Same as before) -->
+    <!-- MENU -->
     <div id="menu-screen" class="hidden">
         <div class="flex justify-between items-center mb-4">
-            <button id="back-to-home-btn" class="text-xs text-gray-600 font-black bg-white border border-gray-200 px-3 py-2 rounded-xl">
-                ← Terug
-            </button>
-            <h2 id="current-restaurant-name" class="text-lg font-black"></h2>
             <button id="toggle-orders-btn" class="text-[10px] text-gray-600 font-black bg-white border border-gray-200 px-3 py-2 rounded-xl">
-                📋
+                📋 Bestellingen
             </button>
-        </div>
-
-        <div class="flex justify-between items-center mb-4">
             <button id="toggle-admin-btn" class="text-[10px] text-gray-600 font-black bg-white border border-gray-200 px-3 py-2 rounded-xl">
                 ⚙️ Beheer
             </button>
@@ -104,7 +96,7 @@
         </div>
     </div>
 
-    <!-- ADMIN SCREEN -->
+    <!-- ADMIN -->
     <div id="admin-screen" class="hidden">
         <div class="flex justify-between items-center mb-6">
             <h2 class="text-2xl font-black">Beheer</h2>
@@ -122,11 +114,10 @@
 
         <!-- ADMIN CONTENT (Hidden until unlocked) -->
         <div id="admin-content" class="hidden">
-            <div class="flex gap-2 mb-4 border-b border-gray-200 overflow-x-auto">
+            <div class="flex gap-2 mb-4 border-b border-gray-200">
                 <button class="tab-btn active" data-tab="export">📥 Export</button>
                 <button class="tab-btn" data-tab="products">📝 Producten</button>
                 <button class="tab-btn" data-tab="upload-prices">📄 Prijzen</button>
-                <button class="tab-btn" data-tab="scheduling">🗓️ Planning</button>
             </div>
 
             <!-- EXPORT TAB -->
@@ -184,15 +175,6 @@
                     </div>
                 </div>
             </div>
-
-            <!-- SCHEDULING TAB -->
-            <div id="scheduling-tab" class="tab-content hidden">
-                <div class="bg-green-50 border border-green-200 rounded-2xl p-4 mb-4">
-                    <p class="text-sm text-green-800 mb-4 font-bold">📅 Zet restaurants beschikbaar per dag</p>
-                    
-                    <div id="scheduling-grid" class="space-y-4"></div>
-                </div>
-            </div>
         </div>
     </div>
 
@@ -247,27 +229,14 @@
     </div>
 </div>
 
+<!-- PDF EXPORT (not needed - using jsPDF directly) -->
+
 <script>
+    // Set PDF.js worker
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-    // ========== RESTAURANTS ==========
-    const restaurants = [
-        { id: "specht", name: "De Specht", address: "Goor" },
-        { id: "vistaria", name: "Vistaria Enter", address: "Enter" },
-        { id: "kebab-ehran", name: "Kebab van Ehran", address: "Enter" }
-    ];
-
-    const dayNames = ["Maandag", "Dinsdag", "Woensdag", "Donderdag", "Vrijdag", "Zaterdag", "Zondag"];
-    
-    // Default scheduling (0=open, 1=closed)
-    let restaurantSchedule = {
-        "specht": [1, 1, 0, 0, 1, 1, 1],      // Woensdag + Donderdag + Vrijdag
-        "vistaria": [1, 1, 1, 0, 0, 1, 1],    // Woensdag + Donderdag
-        "kebab-ehran": [1, 1, 0, 1, 0, 1, 1]  // Donderdag
-    };
-
-    // ========== MENU DATA (per restaurant) ==========
-    const defaultMenuData = [
+    // ========== MENU DATA ==========
+    let menuData = [
         {
             category: "Patat",
             items: [
@@ -282,13 +251,79 @@
             ]
         },
         {
+            category: "Patat Specialiteiten",
+            items: [
+                { id: 10, name: "Boerensaus", price: 6.50 },
+                { id: 11, name: "Stoofvlees", price: 6.50 },
+                { id: 12, name: "Grote Patat Beenham", price: 8.00 },
+                { id: 13, name: "Grote Patat Shoarma", price: 9.00 },
+                { id: 14, name: "Chili Chicken", price: 8.50 },
+                { id: 15, name: "Grote Patat Pulled Pork", price: 8.50 },
+                { id: 16, name: "Kapsalon", price: 10.00 },
+                { id: 17, name: "Truffelfriet Italiaanse Kaas", price: 7.50 }
+            ]
+        },
+        {
             category: "Snacks",
             items: [
                 { id: 100, name: "Frikandel", price: 2.15 },
                 { id: 101, name: "Frikandel Speciaal", price: 2.95 },
                 { id: 102, name: "XXL Frikandel", price: 3.50 },
-                { id: 103, name: "Kroket", price: 2.20 },
-                { id: 104, name: "Bamischijf", price: 2.40 }
+                { id: 103, name: "XXL Frikandel Speciaal", price: 4.80 },
+                { id: 104, name: "Viandel", price: 2.60 },
+                { id: 105, name: "Kroket", price: 2.20 },
+                { id: 106, name: "Van Dobben Kroket", price: 2.70 },
+                { id: 107, name: "Kalfskroket", price: 2.70 },
+                { id: 108, name: "Goulashkroket", price: 2.70 },
+                { id: 109, name: "Satékroket", price: 2.70 },
+                { id: 110, name: "Bamischijf", price: 2.40 },
+                { id: 111, name: "Pittige Bamischijf", price: 2.70 },
+                { id: 112, name: "Nasischijf", price: 2.30 },
+                { id: 113, name: "Berehap", price: 3.20 },
+                { id: 114, name: "Gehaktbal", price: 3.75 },
+                { id: 115, name: "Boerenbrok", price: 2.70 },
+                { id: 116, name: "Hete Donder", price: 2.70 },
+                { id: 117, name: "Picanto", price: 2.70 },
+                { id: 118, name: "Mexicano", price: 2.70 },
+                { id: 119, name: "Trio", price: 2.70 },
+                { id: 120, name: "Loempia", price: 3.60 },
+                { id: 121, name: "Vietnamese Loempia's 2 st.", price: 3.20 },
+                { id: 122, name: "Braadworst", price: 2.90 },
+                { id: 123, name: "Knakworst", price: 2.25 },
+                { id: 124, name: "Shoarmarol", price: 2.70 },
+                { id: 125, name: "Satérol", price: 2.50 },
+                { id: 126, name: "Smulrol", price: 2.70 },
+                { id: 127, name: "Kaassoufflé", price: 2.40 },
+                { id: 128, name: "XXL Kaassoufflé", price: 3.10 },
+                { id: 129, name: "Ham/Kaassoufflé", price: 2.50 },
+                { id: 130, name: "Kipcorn", price: 2.55 },
+                { id: 131, name: "Kikastick", price: 2.70 },
+                { id: 132, name: "Ragouzi", price: 2.60 },
+                { id: 133, name: "Kaaskroket", price: 2.50 },
+                { id: 134, name: "Eierbal", price: 3.00 }
+            ]
+        },
+        {
+            category: "Bittergarnituur",
+            items: [
+                { id: 200, name: "Mini Snacks 8 st.", price: 4.50 },
+                { id: 201, name: "Hotwings 6 st.", price: 4.60 },
+                { id: 202, name: "Bitterballen 6 st.", price: 3.40 },
+                { id: 203, name: "Kipnuggets 8 st.", price: 3.50 },
+                { id: 204, name: "Chickenstrips 4 st.", price: 3.65 },
+                { id: 205, name: "Uienringen 8 st.", price: 3.10 },
+                { id: 206, name: "Vlammetjes 6 st.", price: 3.40 },
+                { id: 207, name: "Torpedo Garnalen 6 st.", price: 6.50 }
+            ]
+        },
+        {
+            category: "Vleesgerechten",
+            items: [
+                { id: 300, name: "Halve Haan", price: 7.50 },
+                { id: 301, name: "Varkensschnitzel", price: 5.95 },
+                { id: 302, name: "Kipschnitzel", price: 6.95 },
+                { id: 303, name: "Shaslick 190gr", price: 5.95 },
+                { id: 304, name: "Saté Kip", price: 6.75 }
             ]
         },
         {
@@ -296,187 +331,320 @@
             items: [
                 { id: 600, name: "Petfles Cola/Fanta", price: 3.25 },
                 { id: 601, name: "Petfles Melk", price: 2.90 },
-                { id: 602, name: "Red Bull", price: 2.95 }
+                { id: 602, name: "Red Bull", price: 2.95 },
+                { id: 603, name: "Blik Bier", price: 2.95 },
+                { id: 604, name: "Krat Bier", price: 25.00 },
+                { id: 605, name: "Milkshake Klein", price: 3.00 },
+                { id: 606, name: "Milkshake Middel", price: 3.50 },
+                { id: 607, name: "Milkshake Groot", price: 4.00 }
+            ]
+        },
+        {
+            category: "Menu's",
+            items: [
+                { id: 700, name: "Kipschnitzel Menu", price: 14.50 },
+                { id: 701, name: "Saté Kip Menu", price: 14.00 },
+                { id: 702, name: "Halve Haan Menu", price: 15.00 },
+                { id: 703, name: "Hotwings Menu", price: 13.00 },
+                { id: 704, name: "Wings en Ribs Menu", price: 15.00 },
+                { id: 705, name: "Varkens Schnitzel Menu", price: 13.50 },
+                { id: 706, name: "Shaslick Menu", price: 14.00 },
+                { id: 707, name: "Pulled Pork Menu", price: 14.00 },
+                { id: 708, name: "Shoarma Menu", price: 15.25 },
+                { id: 709, name: "Bouwvakkers Menu", price: 13.00 },
+                { id: 710, name: "Boerenfriet Menu", price: 14.00 },
+                { id: 711, name: "Torpedo Garnalen Menu", price: 14.00 },
+                { id: 712, name: "Spare-Ribs Menu", price: 15.00 },
+                { id: 713, name: "Spare-Ribs XXL Menu", price: 19.00 },
+                { id: 714, name: "Kidsbox De Bonte Specht", price: 8.50 }
+            ]
+        },
+        {
+            category: "Burgermenu's",
+            items: [
+                { id: 800, name: "Beefburger Menu", price: 14.50 },
+                { id: 801, name: "Big Nick Burger Menu", price: 14.50 },
+                { id: 802, name: "Guacamole Burger Menu", price: 14.50 },
+                { id: 803, name: "BBQ Chicken Burger Menu", price: 14.50 },
+                { id: 804, name: "Vega Burger Menu", price: 12.00 },
+                { id: 805, name: "Spechtburger Menu", price: 12.50 },
+                { id: 806, name: "Hamburger Menu", price: 12.50 }
+            ]
+        },
+        {
+            category: "Broodspecialiteiten",
+            items: [
+                { id: 900, name: "Indy's Special", price: 9.00 },
+                { id: 901, name: "Tuna Melt", price: 9.00 },
+                { id: 902, name: "Nick's Special", price: 9.00 },
+                { id: 903, name: "Baguette Chili Chicken", price: 8.00 },
+                { id: 904, name: "Baguette Mexicano", price: 5.00 }
+            ]
+        },
+        {
+            category: "Warm Belegde Broodjes",
+            items: [
+                { id: 1000, name: "Broodje Gehaktbal", price: 5.00 },
+                { id: 1001, name: "Broodje Kroketburger", price: 3.50 },
+                { id: 1002, name: "Broodje Van Dobben Kroket", price: 3.50 },
+                { id: 1003, name: "Flaguette Pulled Pork", price: 7.80 },
+                { id: 1004, name: "Baguette Beenham", price: 6.80 },
+                { id: 1005, name: "Flaguette Shoarma", price: 7.80 },
+                { id: 1006, name: "Tosti Ham/Kaas", price: 5.00 },
+                { id: 1007, name: "Broodje Kipburger", price: 3.70 },
+                { id: 1008, name: "Cheeseburger", price: 3.95 }
+            ]
+        },
+        {
+            category: "Broodjes (Koud Belegd)",
+            items: [
+                { id: 1100, name: "Stoete Zalm", price: 8.00 },
+                { id: 1101, name: "Stoete Tonijn", price: 8.00 },
+                { id: 1102, name: "Stoete Burrata", price: 8.00 },
+                { id: 1103, name: "Stoete Good Te Passe", price: 6.60 },
+                { id: 1104, name: "Stoete Brie Van Mie", price: 7.50 },
+                { id: 1105, name: "Kip'n Op Stoete", price: 8.00 },
+                { id: 1106, name: "Stoete Rauw Fleish", price: 7.50 },
+                { id: 1107, name: "Stoete Rosbief", price: 7.50 },
+                { id: 1108, name: "Stoete Carpaccio", price: 8.75 }
+            ]
+        },
+        {
+            category: "Salades",
+            items: [
+                { id: 1200, name: "Zalm Salade", price: 11.00 },
+                { id: 1201, name: "Rundercarpaccio Salade", price: 11.00 },
+                { id: 1202, name: "Ceasarsalade", price: 11.00 },
+                { id: 1203, name: "Salade Burrata", price: 11.00 },
+                { id: 1204, name: "Slaatje", price: 3.95 },
+                { id: 1205, name: "Rauwkostslaatje", price: 2.80 }
             ]
         }
     ];
 
     // ========== STATE ==========
-    let currentRestaurant = null;
-    let currentUser = localStorage.getItem("lunchUser") || "";
+    let currentUser = localStorage.getItem("spechtUser") || "";
     let cart = [];
-    let orders = {};
+    let orders = JSON.parse(localStorage.getItem("spechtOrders") || "[]");
     let adminUnlocked = false;
     let currentCategory = "All";
     let nextId = 2000;
     let pendingPriceChanges = [];
-    let menuData = [];
 
-    const ADMIN_PASSWORD = "Ipex26";
-
-    // ========== INITIALIZATION ==========
-    function init() {
-        loadAllData();
-        loadScheduling();
-        renderRestaurants();
-        
-        // Show home screen by default
-        document.getElementById("home-screen").classList.remove("hidden");
-        document.getElementById("menu-screen").classList.add("hidden");
-        document.getElementById("global-admin-screen").classList.add("hidden");
-
-        // Event listeners
-        document.getElementById("admin-home-btn").onclick = () => {
-            const password = prompt("Admin wachtwoord:");
-            if (password === ADMIN_PASSWORD) {
-                showGlobalAdmin();
-            }
-        };
-    }
-
-    function loadScheduling() {
-        const saved = localStorage.getItem("restaurantSchedule");
-        if (saved) {
-            restaurantSchedule = JSON.parse(saved);
-        }
-    }
-
-    function saveScheduling() {
-        localStorage.setItem("restaurantSchedule", JSON.stringify(restaurantSchedule));
-    }
-
-    function renderScheduling() {
-        const grid = document.getElementById("scheduling-grid");
-        grid.innerHTML = "";
-
-        restaurants.forEach(r => {
-            const schedule = restaurantSchedule[r.id] || [1,1,1,1,1,1,1];
-            
-            const card = document.createElement("div");
-            card.className = "bg-white p-4 rounded-xl border border-gray-200";
-            card.innerHTML = `<h3 class="font-bold mb-3">${r.name}</h3>`;
-            
-            const daysDiv = document.createElement("div");
-            daysDiv.className = "grid grid-cols-7 gap-1";
-            
-            dayNames.forEach((day, idx) => {
-                const isOpen = schedule[idx] === 0;
-                const btn = document.createElement("button");
-                btn.className = `text-xs font-bold py-2 rounded ${isOpen ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`;
-                btn.innerText = day.substring(0, 2);
-                btn.onclick = () => {
-                    restaurantSchedule[r.id][idx] = restaurantSchedule[r.id][idx] === 0 ? 1 : 0;
-                    saveScheduling();
-                    renderScheduling();
-                    renderRestaurants();
-                };
-                daysDiv.appendChild(btn);
-            });
-            
-            card.appendChild(daysDiv);
-            grid.appendChild(card);
-        });
-    }
-
-    function loadAllData() {
-        restaurants.forEach(r => {
-            if (!localStorage.getItem(`menu_${r.id}`)) {
-                localStorage.setItem(`menu_${r.id}`, JSON.stringify(defaultMenuData));
-            }
-            if (!localStorage.getItem(`orders_${r.id}`)) {
-                localStorage.setItem(`orders_${r.id}`, JSON.stringify([]));
-            }
-        });
-    }
-
-    function renderRestaurants() {
-        const grid = document.getElementById("restaurants-grid");
-        grid.innerHTML = "";
-
-        const today = new Date().getDay();
-        const dayIndex = today === 0 ? 6 : today - 1; // Convert JS day (0=Sun) to our format (0=Mon)
-
-        restaurants.forEach(r => {
-            const schedule = restaurantSchedule[r.id] || [1,1,1,1,1,1,1];
-            const isOpen = schedule[dayIndex] === 0;
-
-            const card = document.createElement("div");
-            card.className = `restaurant-card ${!isOpen ? 'opacity-50 cursor-not-allowed' : ''}`;
-            card.innerHTML = `
-                <h3>${r.name}</h3>
-                <p>${r.address}</p>
-                ${!isOpen ? '<p class="text-xs text-red-500 mt-2">Vandaag gesloten</p>' : ''}
-            `;
-            
-            if (isOpen) {
-                card.onclick = () => selectRestaurant(r);
-            }
-            grid.appendChild(card);
-        });
-    }
-
-    function selectRestaurant(restaurant) {
-        currentRestaurant = restaurant;
-        loadMenuData();
-        loadOrders();
-
-        if (!currentUser) {
-            showLoginScreen(restaurant);
-        } else {
-            showMenuScreen();
-        }
-    }
-
-    function showLoginScreen(restaurant) {
-        const modal = document.getElementById("modal");
-        document.getElementById("modal-content").innerHTML = `
-            <h2 class="text-xl font-bold mb-4">Hoe heet je?</h2>
-            <input type="text" id="login-name" class="w-full p-4 border border-gray-200 rounded-2xl mb-4 outline-none focus:ring-2 focus:ring-red-400" placeholder="Jouw Naam">
-            <button id="confirm-login" class="bg-[#FF5A5F] text-white w-full py-4 rounded-2xl font-bold text-lg hover:bg-[#FF3E46]">
-                Start Bestellen
-            </button>
-        `;
-        document.getElementById("modal-close").classList.add("hidden");
-        modal.style.display = "flex";
-
-        document.getElementById("confirm-login").onclick = () => {
-            const name = document.getElementById("login-name").value.trim();
-            if (name) {
-                currentUser = name;
-                localStorage.setItem("lunchUser", name);
-                closeModal();
-                showMenuScreen();
-            }
-        };
-    }
+    const ADMIN_PASSWORD = "Specht";
 
     function loadMenuData() {
-        const saved = localStorage.getItem(`menu_${currentRestaurant.id}`);
-        menuData = saved ? JSON.parse(saved) : JSON.parse(JSON.stringify(defaultMenuData));
-    }
-
-    function loadOrders() {
-        const saved = localStorage.getItem(`orders_${currentRestaurant.id}`);
-        orders = saved ? JSON.parse(saved) : [];
+        const saved = localStorage.getItem("spechtMenuData");
+        if (saved) {
+            try {
+                menuData = JSON.parse(saved);
+            } catch (e) {
+                console.error("Error loading menu data", e);
+            }
+        }
     }
 
     function saveMenuData() {
-        localStorage.setItem(`menu_${currentRestaurant.id}`, JSON.stringify(menuData));
+        localStorage.setItem("spechtMenuData", JSON.stringify(menuData));
     }
 
-    function saveOrders() {
-        localStorage.setItem(`orders_${currentRestaurant.id}`, JSON.stringify(orders));
+    // ========== PDF ANALYSIS ==========
+    async function analyzePDF() {
+        const fileInput = document.getElementById("pdf-upload");
+        if (!fileInput.files[0]) {
+            showPdfStatus("❌ Selecteer eerst een PDF bestand", "error");
+            return;
+        }
+
+        const status = document.getElementById("pdf-status");
+        status.innerHTML = "⏳ PDF wordt gelezen...";
+
+        try {
+            const file = fileInput.files[0];
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            
+            let fullText = "";
+            for (let i = 1; i <= pdf.numPages; i++) {
+                const page = await pdf.getPage(i);
+                const textContent = await page.getTextContent();
+                fullText += textContent.items.map(item => item.str).join(" ");
+            }
+
+            // Parse prices by line
+            const extractedPrices = extractPricesByLine(fullText);
+            
+            if (extractedPrices.length === 0) {
+                showPdfStatus("❌ Geen prijzen gevonden in PDF", "error");
+                return;
+            }
+
+            // Compare with current menu
+            compareWithCurrentMenu(extractedPrices);
+            showPdfStatus(`✅ ${extractedPrices.length} items gelezen`, "success");
+
+        } catch (error) {
+            showPdfStatus(`❌ Fout bij lezen PDF: ${error.message}`, "error");
+            console.error(error);
+        }
     }
 
-    function showMenuScreen() {
-        document.getElementById("home-screen").classList.add("hidden");
+    function extractPricesByLine(text) {
+        const lines = text.split(/[\n\r]+/);
+        const prices = [];
+
+        lines.forEach(line => {
+            // Each line format: "Name ... Price"
+            // Match: word characters followed by a price (€2.60 or 2,60 or 2.60)
+            const priceMatch = line.match(/^(.+?)\s+(?:€\s*)?(\d{1,2}[.,]\d{2})\s*$/);
+            
+            if (priceMatch) {
+                let name = priceMatch[1].trim();
+                let priceStr = priceMatch[2].replace(",", ".");
+                let price = parseFloat(priceStr);
+                
+                // Only accept if name is reasonable length and price is valid
+                if (name.length > 2 && name.length < 120 && price > 0 && price < 100) {
+                    prices.push({ name, price });
+                }
+            }
+        });
+
+        return prices;
+    }
+
+    function compareWithCurrentMenu(extractedPrices) {
+        pendingPriceChanges = [];
+
+        extractedPrices.forEach(extracted => {
+            // Find EXACT match in current menu
+            menuData.forEach(cat => {
+                cat.items.forEach((item, itemIdx) => {
+                    // Case-insensitive exact match
+                    if (item.name.toLowerCase() === extracted.name.toLowerCase()) {
+                        if (Math.abs(item.price - extracted.price) > 0.01) {
+                            // Price changed
+                            pendingPriceChanges.push({
+                                catIdx: menuData.indexOf(cat),
+                                itemIdx: itemIdx,
+                                name: item.name,
+                                oldPrice: item.price,
+                                newPrice: extracted.price
+                            });
+                        }
+                    }
+                });
+            });
+        });
+
+        displayPriceChanges();
+    }
+
+    function displayPriceChanges() {
+        const container = document.getElementById("price-changes-container");
+        const list = document.getElementById("changes-list");
+        
+        list.innerHTML = "";
+
+        if (pendingPriceChanges.length === 0) {
+            list.innerHTML = '<p class="text-center text-gray-500">Geen prijswijzigingen gevonden.</p>';
+            container.classList.remove("hidden");
+            return;
+        }
+
+        pendingPriceChanges.forEach(change => {
+            const div = document.createElement("div");
+            div.className = change.newPrice > change.oldPrice ? "price-change" : "price-change new";
+            div.innerHTML = `
+                <div class="font-bold text-sm">${change.name}</div>
+                <div class="text-xs text-gray-600">
+                    <span>€${change.oldPrice.toFixed(2)}</span>
+                    <span class="mx-2">→</span>
+                    <span class="font-bold">€${change.newPrice.toFixed(2)}</span>
+                </div>
+            `;
+            list.appendChild(div);
+        });
+
+        container.classList.remove("hidden");
+    }
+
+    function approvePriceChanges() {
+        pendingPriceChanges.forEach(change => {
+            menuData[change.catIdx].items[change.itemIdx].price = change.newPrice;
+        });
+
+        saveMenuData();
+        showModal(`✅ ${pendingPriceChanges.length} prijzen bijgewerkt!`, true);
+        
+        // Reset
+        document.getElementById("price-changes-container").classList.add("hidden");
+        document.getElementById("pdf-upload").value = "";
+        document.getElementById("pdf-status").innerHTML = "";
+        pendingPriceChanges = [];
+        
+        renderMenuEditor();
+    }
+
+    function showPdfStatus(msg, type) {
+        const status = document.getElementById("pdf-status");
+        status.innerHTML = msg;
+        status.className = type === "error" ? "mt-3 text-sm text-red-600" : "mt-3 text-sm text-green-600";
+    }
+
+    // ========== EVENT LISTENERS ==========
+    document.getElementById("login-btn").onclick = saveName;
+    document.getElementById("logout-btn").onclick = () => {
+        localStorage.removeItem("spechtUser");
+        location.reload();
+    };
+    document.getElementById("toggle-orders-btn").onclick = showOrders;
+    document.getElementById("toggle-admin-btn").onclick = showAdmin;
+    document.getElementById("back-from-orders-btn").onclick = showMenu;
+    document.getElementById("back-to-menu-btn").onclick = showMenu;
+    document.getElementById("back-to-menu-from-cart-btn").onclick = backToMenu;
+    document.getElementById("menu-search").oninput = renderMenu;
+    document.getElementById("send-btn").onclick = submitOrder;
+    document.getElementById("modal-close").onclick = closeModal;
+    document.getElementById("export-pdf-btn").onclick = exportPDF;
+    document.getElementById("edit-cart-btn").onclick = editCart;
+    document.getElementById("confirm-order-btn").onclick = submitOrder;
+    document.getElementById("cancel-order-btn").onclick = backToMenu;
+    document.getElementById("unlock-admin-btn").onclick = unlockAdmin;
+    document.getElementById("add-item-btn").onclick = addNewItem;
+    document.getElementById("analyze-pdf-btn").onclick = analyzePDF;
+    document.getElementById("approve-changes-btn").onclick = approvePriceChanges;
+    document.getElementById("cancel-changes-btn").onclick = () => {
+        document.getElementById("price-changes-container").classList.add("hidden");
+        pendingPriceChanges = [];
+    };
+
+    // Tab switching
+    document.querySelectorAll(".tab-btn").forEach(btn => {
+        btn.onclick = (e) => {
+            document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+            document.querySelectorAll(".tab-content").forEach(c => c.classList.add("hidden"));
+            e.target.classList.add("active");
+            const tab = e.target.dataset.tab;
+            document.getElementById(tab + "-tab").classList.remove("hidden");
+            if (tab === "export") renderAdminOrders();
+            if (tab === "products") renderMenuEditor();
+        };
+    });
+
+    function saveName() {
+        const name = document.getElementById("username").value.trim();
+        if (!name) return;
+        currentUser = name;
+        localStorage.setItem("spechtUser", name);
+        document.getElementById("login-screen").classList.add("hidden");
         document.getElementById("menu-screen").classList.remove("hidden");
-        document.getElementById("current-restaurant-name").innerText = currentRestaurant.name;
+        document.getElementById("greeting").innerText = `Hoi ${name}! 👋`;
+        loadMenuData();
         renderCategories();
         renderMenu();
     }
 
-    // ========== MENU RENDERING ==========
     function renderCategories() {
         const bar = document.getElementById("category-bar");
         const cats = ["All", ...menuData.map(c => c.category)];
@@ -542,10 +710,10 @@
         renderMenu();
     }
 
-    // ========== ORDERS & EXPORT ==========
     function showOrders() {
         document.getElementById("menu-screen").classList.add("hidden");
         document.getElementById("orders-screen").classList.remove("hidden");
+        document.getElementById("admin-screen").classList.add("hidden");
         document.getElementById("cart-footer").classList.add("hidden");
         renderPublicOrders();
     }
@@ -563,7 +731,8 @@
         
         list.innerHTML = "";
         let total = 0;
-        todayOrders.forEach(o => {
+        
+        todayOrders.forEach((o) => {
             total += o.total;
             const card = document.createElement("div");
             card.className = "order-card";
@@ -574,97 +743,72 @@
         document.getElementById("public-grand-total").innerText = total.toFixed(2);
     }
 
-    function exportPDF() {
-        const today = new Date().toDateString();
-        const todayOrders = orders.filter(o => new Date(o.date).toDateString() === today);
-        
-        if (todayOrders.length === 0) {
-            alert("Geen bestellingen om te exporteren.");
-            return;
-        }
+    function editCart() {
+        document.getElementById("menu-screen").classList.add("hidden");
+        document.getElementById("admin-screen").classList.add("hidden");
+        document.getElementById("cart-edit-screen").classList.remove("hidden");
+        document.getElementById("cart-footer").classList.add("hidden");
+        renderCartEdit();
+    }
 
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
-        
-        let yPos = 15;
-        const pageWidth = doc.internal.pageSize.getWidth();
-        const margin = 15;
-        
-        // Header
-        doc.setFontSize(20);
-        doc.setFont(undefined, 'bold');
-        doc.text(currentRestaurant.name.toUpperCase(), pageWidth / 2, yPos, { align: "center" });
-        yPos += 10;
-        
-        doc.setFontSize(10);
-        doc.setFont(undefined, 'normal');
-        doc.setTextColor(120);
-        doc.text("Bestelbon", pageWidth / 2, yPos, { align: "center" });
-        yPos += 7;
-        
-        doc.setFontSize(9);
-        doc.text(new Date().toLocaleDateString('nl-NL', { year: 'numeric', month: 'long', day: 'numeric' }), pageWidth / 2, yPos, { align: "center" });
-        doc.setTextColor(0);
-        yPos += 12;
-        
-        // Divider
-        doc.setLineWidth(0.3);
-        doc.line(margin, yPos, pageWidth - margin, yPos);
-        yPos += 8;
-        
-        // Table header
-        doc.setFontSize(9);
-        doc.setFont(undefined, 'bold');
-        doc.text("Naam", margin, yPos);
-        doc.text("Bestelling", margin + 40, yPos);
-        doc.text("Bedrag", pageWidth - margin - 10, yPos, { align: "right" });
-        yPos += 6;
-        
-        doc.setLineWidth(0.2);
-        doc.line(margin, yPos, pageWidth - margin, yPos);
-        yPos += 6;
-        
-        // Table rows
-        doc.setFont(undefined, 'normal');
-        doc.setFontSize(9);
-        let total = 0;
-        
-        todayOrders.forEach(o => {
-            const counts = o.items.reduce((a, c) => { a[c.name] = (a[c.name] || 0) + 1; return a; }, {});
-            const itemsStr = Object.entries(counts).map(([n, c]) => `${c}x ${n}`).join(", ");
-            const itemsLines = doc.splitTextToSize(itemsStr, 85);
-            const rowHeight = Math.max(6, itemsLines.length * 5) + 1;
-            
-            if (Math.floor(yPos / 10) % 2 === 0) {
-                doc.setFillColor(245, 245, 245);
-                doc.rect(margin, yPos - 4, pageWidth - (2 * margin), rowHeight, 'F');
+    function renderCartEdit() {
+        const container = document.getElementById("cart-edit-container");
+        container.innerHTML = "";
+
+        const grouped = cart.reduce((acc, item) => {
+            const existing = acc.find(g => g.id === item.id);
+            if (existing) {
+                existing.count++;
+            } else {
+                acc.push({ ...item, count: 1 });
             }
-            
-            doc.text(o.user, margin + 2, yPos);
-            doc.text(itemsLines, margin + 40 + 2, yPos);
-            doc.text(`€${o.total.toFixed(2)}`, pageWidth - margin - 2, yPos, { align: "right" });
-            
-            yPos += rowHeight + 1;
-            total += o.total;
-            
-            if (yPos > 270) {
-                doc.addPage();
-                yPos = 15;
-            }
+            return acc;
+        }, []);
+
+        grouped.forEach((item) => {
+            const div = document.createElement("div");
+            div.className = "bg-white p-4 rounded-xl border border-gray-200 flex justify-between items-center";
+            div.innerHTML = `
+                <div class="flex-1">
+                    <h3 class="font-bold text-sm">${item.name}</h3>
+                    <p class="text-xs text-gray-500">€${item.price.toFixed(2)} per stuk</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button class="w-8 h-8 bg-gray-100 rounded-lg font-bold text-gray-600 hover:bg-gray-200">−</button>
+                    <span class="w-6 text-center font-bold">${item.count}</span>
+                    <button class="w-8 h-8 bg-gray-100 rounded-lg font-bold text-gray-600 hover:bg-gray-200">+</button>
+                </div>
+            `;
+
+            const minBtn = div.querySelector("button:first-of-type");
+            const plusBtn = div.querySelector("button:last-of-type");
+
+            minBtn.onclick = () => {
+                for (let i = 0; i < item.count; i++) {
+                    const idx = cart.findIndex(c => c.id === item.id);
+                    if (idx > -1) cart.splice(idx, 1);
+                }
+                renderCartEdit();
+                updateUI();
+            };
+
+            plusBtn.onclick = () => {
+                cart.push(item);
+                renderCartEdit();
+                updateUI();
+            };
+
+            container.appendChild(div);
         });
-        
-        yPos += 2;
-        doc.setLineWidth(0.3);
-        doc.line(margin, yPos, pageWidth - margin, yPos);
-        yPos += 8;
-        
-        doc.setFont(undefined, 'bold');
-        doc.setFontSize(12);
-        doc.text("TOTAAL", margin, yPos);
-        doc.text(`€${total.toFixed(2)}`, pageWidth - margin - 2, yPos, { align: "right" });
-        
-        const dateStr = new Date().toISOString().split('T')[0];
-        doc.save(`Bestelbon_${currentRestaurant.id}_${dateStr}.pdf`);
+
+        document.getElementById("cart-edit-total").innerText = cart.reduce((s, i) => s + i.price, 0).toFixed(2);
+    }
+
+    function backToMenu() {
+        document.getElementById("menu-screen").classList.remove("hidden");
+        document.getElementById("admin-screen").classList.add("hidden");
+        document.getElementById("cart-edit-screen").classList.add("hidden");
+        if (cart.length > 0) document.getElementById("cart-footer").classList.remove("hidden");
     }
 
     function submitOrder() {
@@ -678,15 +822,15 @@
             date: new Date().toISOString()
         });
         
-        saveOrders();
-        showModal('Smakelijk! Bestelling opgeslagen.', true);
+        localStorage.setItem("spechtOrders", JSON.stringify(orders));
+        
+        showModal('🍟 <h2 class="text-xl font-bold mt-2">Smakelijk!</h2><p class="text-gray-400 text-sm">Bestelling opgeslagen.</p>', true);
         cart = [];
         document.getElementById("cart-edit-screen").classList.add("hidden");
         updateUI();
-        showMenuScreen();
+        backToMenu();
     }
 
-    // ========== ADMIN ==========
     function showAdmin() {
         adminUnlocked = false;
         document.getElementById("menu-screen").classList.add("hidden");
@@ -694,6 +838,13 @@
         document.getElementById("cart-footer").classList.add("hidden");
         document.getElementById("admin-content").classList.add("hidden");
         document.getElementById("password-check").classList.remove("hidden");
+    }
+
+    function showMenu() {
+        document.getElementById("menu-screen").classList.remove("hidden");
+        document.getElementById("admin-screen").classList.add("hidden");
+        document.getElementById("orders-screen").classList.add("hidden");
+        if (cart.length > 0) document.getElementById("cart-footer").classList.remove("hidden");
     }
 
     function unlockAdmin() {
@@ -704,7 +855,7 @@
             document.getElementById("admin-content").classList.remove("hidden");
             renderAdminOrders();
         } else {
-            showModal('Verkeerd wachtwoord', true);
+            showModal('❌ Verkeerd wachtwoord', true);
             document.getElementById("admin-password").value = "";
         }
     }
@@ -742,9 +893,9 @@
             `;
             
             card.querySelector("button").onclick = () => {
-                if (confirm(`${o.user} verwijderen?`)) {
-                    orders.splice(orders.indexOf(o), 1);
-                    saveOrders();
+                if (confirm(`${o.user} uit de lijst verwijderen?`)) {
+                    orders = orders.filter((order, i) => i !== orders.indexOf(o));
+                    localStorage.setItem("spechtOrders", JSON.stringify(orders));
                     renderAdminOrders();
                 }
             };
@@ -818,275 +969,111 @@
         renderMenuEditor();
     }
 
-    // ========== PDF PARSING ==========
-    async function analyzePDF() {
-        const fileInput = document.getElementById("pdf-upload");
-        if (!fileInput.files[0]) {
-            showPdfStatus("Selecteer eerst een PDF bestand", "error");
+    function exportPDF() {
+        const today = new Date().toDateString();
+        const todayOrders = orders.filter(o => new Date(o.date).toDateString() === today);
+        
+        if (todayOrders.length === 0) {
+            alert("Geen bestellingen om te exporteren.");
             return;
         }
 
-        try {
-            const file = fileInput.files[0];
-            const arrayBuffer = await file.arrayBuffer();
-            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-            
-            let fullText = "";
-            for (let i = 1; i <= pdf.numPages; i++) {
-                const page = await pdf.getPage(i);
-                const textContent = await page.getTextContent();
-                fullText += textContent.items.map(item => item.str).join(" ");
-            }
-
-            const extractedPrices = extractPricesByLine(fullText);
-            
-            if (extractedPrices.length === 0) {
-                showPdfStatus("Geen prijzen gevonden in PDF", "error");
-                return;
-            }
-
-            compareWithCurrentMenu(extractedPrices);
-            showPdfStatus(`${extractedPrices.length} items gelezen`, "success");
-
-        } catch (error) {
-            showPdfStatus(`Fout bij lezen PDF: ${error.message}`, "error");
-        }
-    }
-
-    function extractPricesByLine(text) {
-        const lines = text.split(/[\n\r]+/);
-        const prices = [];
-
-        lines.forEach(line => {
-            const priceMatch = line.match(/^(.+?)\s+(?:€\s*)?(\d{1,2}[.,]\d{2})\s*$/);
-            
-            if (priceMatch) {
-                let name = priceMatch[1].trim();
-                let priceStr = priceMatch[2].replace(",", ".");
-                let price = parseFloat(priceStr);
-                
-                if (name.length > 2 && name.length < 120 && price > 0 && price < 100) {
-                    prices.push({ name, price });
-                }
-            }
-        });
-
-        return prices;
-    }
-
-    function compareWithCurrentMenu(extractedPrices) {
-        pendingPriceChanges = [];
-
-        extractedPrices.forEach(extracted => {
-            menuData.forEach(cat => {
-                cat.items.forEach((item, itemIdx) => {
-                    if (item.name.toLowerCase() === extracted.name.toLowerCase()) {
-                        if (Math.abs(item.price - extracted.price) > 0.01) {
-                            pendingPriceChanges.push({
-                                catIdx: menuData.indexOf(cat),
-                                itemIdx: itemIdx,
-                                name: item.name,
-                                oldPrice: item.price,
-                                newPrice: extracted.price
-                            });
-                        }
-                    }
-                });
-            });
-        });
-
-        displayPriceChanges();
-    }
-
-    function displayPriceChanges() {
-        const container = document.getElementById("price-changes-container");
-        const list = document.getElementById("changes-list");
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
         
-        list.innerHTML = "";
-
-        if (pendingPriceChanges.length === 0) {
-            list.innerHTML = '<p class="text-center text-gray-500">Geen prijswijzigingen gevonden.</p>';
-            container.classList.remove("hidden");
-            return;
-        }
-
-        pendingPriceChanges.forEach(change => {
-            const div = document.createElement("div");
-            div.className = change.newPrice > change.oldPrice ? "price-change" : "price-change new";
-            div.innerHTML = `
-                <div class="font-bold text-sm">${change.name}</div>
-                <div class="text-xs text-gray-600">
-                    <span>€${change.oldPrice.toFixed(2)}</span>
-                    <span class="mx-2">→</span>
-                    <span class="font-bold">€${change.newPrice.toFixed(2)}</span>
-                </div>
-            `;
-            list.appendChild(div);
-        });
-
-        container.classList.remove("hidden");
-    }
-
-    function approvePriceChanges() {
-        pendingPriceChanges.forEach(change => {
-            menuData[change.catIdx].items[change.itemIdx].price = change.newPrice;
-        });
-
-        saveMenuData();
-        showModal(`${pendingPriceChanges.length} prijzen bijgewerkt!`, true);
+        let yPos = 15;
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const margin = 15;
+        const contentWidth = pageWidth - (2 * margin);
         
-        document.getElementById("price-changes-container").classList.add("hidden");
-        document.getElementById("pdf-upload").value = "";
-        document.getElementById("pdf-status").innerHTML = "";
-        pendingPriceChanges = [];
+        // Header
+        doc.setFontSize(20);
+        doc.setFont(undefined, 'bold');
+        doc.text("DE SPECHT", pageWidth / 2, yPos, { align: "center" });
+        yPos += 10;
         
-        renderMenuEditor();
-    }
-
-    function showPdfStatus(msg, type) {
-        const status = document.getElementById("pdf-status");
-        status.innerHTML = msg;
-        status.className = type === "error" ? "mt-3 text-sm text-red-600" : "mt-3 text-sm text-green-600";
-    }
-
-    // ========== UI HELPERS ==========
-    function showMenuScreen() {
-        document.getElementById("home-screen").classList.add("hidden");
-        document.getElementById("menu-screen").classList.remove("hidden");
-        document.getElementById("orders-screen").classList.add("hidden");
-        document.getElementById("admin-screen").classList.add("hidden");
-        if (cart.length > 0) document.getElementById("cart-footer").classList.remove("hidden");
-    }
-
-    function showGlobalAdmin() {
-        document.getElementById("home-screen").classList.add("hidden");
-        document.getElementById("global-admin-screen").classList.remove("hidden");
-        document.getElementById("menu-screen").classList.add("hidden");
-        renderGlobalAdmin();
-    }
-
-    function renderGlobalAdmin() {
-        const container = document.getElementById("global-admin-content");
-        container.innerHTML = `
-            <div class="space-y-4">
-                <h3 class="font-bold text-lg mb-4">Restaurants Beheren</h3>
-                
-                <div id="global-restaurants-list" class="space-y-3"></div>
-                
-                <button id="add-restaurant-btn" class="w-full bg-green-500 text-white py-3 rounded-xl font-bold hover:bg-green-600">
-                    + Nieuw Restaurant
-                </button>
-            </div>
-        `;
-
-        const list = document.getElementById("global-restaurants-list");
-        restaurants.forEach((r, idx) => {
-            const card = document.createElement("div");
-            card.className = "bg-white p-4 rounded-xl border border-gray-200";
-            card.innerHTML = `
-                <div class="flex justify-between items-start mb-3">
-                    <div class="flex-1">
-                        <h4 class="font-bold">${r.name}</h4>
-                        <p class="text-sm text-gray-500">${r.address}</p>
-                    </div>
-                    <button class="text-red-500 font-bold text-sm hover:text-red-700">×</button>
-                </div>
-                <div class="grid grid-cols-2 gap-2">
-                    <button class="text-xs bg-blue-100 text-blue-700 py-2 rounded font-bold hover:bg-blue-200">
-                        📝 Menu
-                    </button>
-                    <button class="text-xs bg-purple-100 text-purple-700 py-2 rounded font-bold hover:bg-purple-200">
-                        📊 Bestellingen
-                    </button>
-                </div>
-            `;
-            list.appendChild(card);
-        });
-
-        document.getElementById("add-restaurant-btn").onclick = () => {
-            const name = prompt("Restaurant naam:");
-            if (!name) return;
-            const address = prompt("Adres:");
-            if (!address) return;
+        doc.setFontSize(10);
+        doc.setFont(undefined, 'normal');
+        doc.setTextColor(120);
+        doc.text("Bestelbon", pageWidth / 2, yPos, { align: "center" });
+        yPos += 7;
+        
+        doc.setFontSize(9);
+        doc.text(new Date().toLocaleDateString('nl-NL', { year: 'numeric', month: 'long', day: 'numeric' }), pageWidth / 2, yPos, { align: "center" });
+        doc.setTextColor(0);
+        yPos += 12;
+        
+        // Divider line
+        doc.setLineWidth(0.3);
+        doc.line(margin, yPos, pageWidth - margin, yPos);
+        yPos += 8;
+        
+        // Column widths
+        const colName = 40;
+        const colItems = 85;
+        const colPrice = 25;
+        
+        // Table header
+        doc.setFontSize(9);
+        doc.setFont(undefined, 'bold');
+        doc.text("Naam", margin, yPos);
+        doc.text("Bestelling", margin + colName, yPos);
+        doc.text("Bedrag", pageWidth - margin - 10, yPos, { align: "right" });
+        yPos += 6;
+        
+        // Header underline
+        doc.setLineWidth(0.2);
+        doc.line(margin, yPos, pageWidth - margin, yPos);
+        yPos += 6;
+        
+        // Table rows
+        doc.setFont(undefined, 'normal');
+        doc.setFontSize(9);
+        let total = 0;
+        
+        todayOrders.forEach(o => {
+            const counts = o.items.reduce((a, c) => { a[c.name] = (a[c.name] || 0) + 1; return a; }, {});
+            const itemsStr = Object.entries(counts).map(([n, c]) => `${c}x ${n}`).join(", ");
             
-            const newId = `restaurant_${Date.now()}`;
-            restaurants.push({ id: newId, name, address });
-            localStorage.setItem(`menu_${newId}`, JSON.stringify(JSON.parse(JSON.stringify(defaultMenuData))));
-            localStorage.setItem(`orders_${newId}`, JSON.stringify([]));
-            restaurantSchedule[newId] = [1,1,1,1,1,1,1];
-            saveScheduling();
+            // Split items into multiple lines if needed
+            const itemsLines = doc.splitTextToSize(itemsStr, colItems - 5);
+            const rowHeight = Math.max(6, itemsLines.length * 5) + 1;
             
-            renderGlobalAdmin();
-            renderRestaurants();
-        };
-    }
-
-    function backToHome() {
-        currentRestaurant = null;
-        cart = [];
-        currentCategory = "All";
-        document.getElementById("menu-screen").classList.add("hidden");
-        document.getElementById("global-admin-screen").classList.add("hidden");
-        document.getElementById("home-screen").classList.remove("hidden");
-        document.getElementById("cart-footer").classList.add("hidden");
-    }
-        document.getElementById("menu-screen").classList.add("hidden");
-        document.getElementById("cart-edit-screen").classList.remove("hidden");
-        document.getElementById("cart-footer").classList.add("hidden");
-        renderCartEdit();
-    }
-
-    function renderCartEdit() {
-        const container = document.getElementById("cart-edit-container");
-        container.innerHTML = "";
-
-        const grouped = cart.reduce((acc, item) => {
-            const existing = acc.find(g => g.id === item.id);
-            if (existing) {
-                existing.count++;
-            } else {
-                acc.push({ ...item, count: 1 });
+            // Alternating row background
+            if (Math.floor(yPos / 10) % 2 === 0) {
+                doc.setFillColor(245, 245, 245);
+                doc.rect(margin, yPos - 4, contentWidth, rowHeight, 'F');
             }
-            return acc;
-        }, []);
-
-        grouped.forEach((item) => {
-            const div = document.createElement("div");
-            div.className = "bg-white p-4 rounded-xl border border-gray-200 flex justify-between items-center";
-            div.innerHTML = `
-                <div class="flex-1">
-                    <h3 class="font-bold text-sm">${item.name}</h3>
-                    <p class="text-xs text-gray-500">€${item.price.toFixed(2)} per stuk</p>
-                </div>
-                <div class="flex items-center gap-2">
-                    <button class="w-8 h-8 bg-gray-100 rounded-lg font-bold text-gray-600 hover:bg-gray-200">−</button>
-                    <span class="w-6 text-center font-bold">${item.count}</span>
-                    <button class="w-8 h-8 bg-gray-100 rounded-lg font-bold text-gray-600 hover:bg-gray-200">+</button>
-                </div>
-            `;
-
-            const minBtn = div.querySelector("button:first-of-type");
-            const plusBtn = div.querySelector("button:last-of-type");
-
-            minBtn.onclick = () => {
-                for (let i = 0; i < item.count; i++) {
-                    const idx = cart.findIndex(c => c.id === item.id);
-                    if (idx > -1) cart.splice(idx, 1);
-                }
-                renderCartEdit();
-                updateUI();
-            };
-
-            plusBtn.onclick = () => {
-                cart.push(item);
-                renderCartEdit();
-                updateUI();
-            };
-
-            container.appendChild(div);
+            
+            doc.text(o.user, margin + 2, yPos);
+            doc.text(itemsLines, margin + colName + 2, yPos);
+            doc.text(`€${o.total.toFixed(2)}`, pageWidth - margin - 2, yPos, { align: "right" });
+            
+            yPos += rowHeight + 1;
+            total += o.total;
+            
+            // Check if we need a new page
+            if (yPos > 270) {
+                doc.addPage();
+                yPos = 15;
+            }
         });
-
-        document.getElementById("cart-edit-total").innerText = cart.reduce((s, i) => s + i.price, 0).toFixed(2);
+        
+        // Bottom divider
+        yPos += 2;
+        doc.setLineWidth(0.3);
+        doc.line(margin, yPos, pageWidth - margin, yPos);
+        yPos += 8;
+        
+        // Total
+        doc.setFont(undefined, 'bold');
+        doc.setFontSize(12);
+        doc.text("TOTAAL", margin, yPos);
+        doc.text(`€${total.toFixed(2)}`, pageWidth - margin - 2, yPos, { align: "right" });
+        
+        // Save
+        const dateStr = new Date().toISOString().split('T')[0];
+        doc.save(`Bestelbon_${dateStr}.pdf`);
     }
 
     function showModal(content, show) {
@@ -1099,58 +1086,15 @@
         document.getElementById("modal").style.display = "none";
     }
 
-    function showGlobalAdmin() {
-        showModal('<h2 class="text-xl font-bold">Globaal Beheer</h2><p class="mt-4">Coming soon - restaurants beheren</p>', true);
+    // Init
+    loadMenuData();
+    if (currentUser) {
+        document.getElementById("login-screen").classList.add("hidden");
+        document.getElementById("menu-screen").classList.remove("hidden");
+        document.getElementById("greeting").innerText = `Hoi ${currentUser}! 👋`;
+        renderCategories();
+        renderMenu();
     }
-
-    // ========== EVENT LISTENERS ==========
-    document.getElementById("logout-btn").onclick = () => {
-        localStorage.removeItem("lunchUser");
-        currentUser = "";
-        backToHome();
-    };
-
-    document.getElementById("back-from-global-admin-btn").onclick = backToHome;
-    document.getElementById("toggle-orders-btn").onclick = showOrders;
-    document.getElementById("back-from-orders-btn").onclick = showMenuScreen;
-    document.getElementById("toggle-admin-btn").onclick = showAdmin;
-    document.getElementById("back-to-menu-btn").onclick = showMenuScreen;
-    document.getElementById("back-to-home-btn").onclick = backToHome;
-
-    document.getElementById("menu-search").oninput = renderMenu;
-    document.getElementById("send-btn").onclick = submitOrder;
-    document.getElementById("edit-cart-btn").onclick = editCart;
-    document.getElementById("confirm-order-btn").onclick = submitOrder;
-    document.getElementById("cancel-order-btn").onclick = showMenuScreen;
-    document.getElementById("back-to-menu-from-cart-btn").onclick = showMenuScreen;
-
-    document.getElementById("unlock-admin-btn").onclick = unlockAdmin;
-    document.getElementById("export-pdf-btn").onclick = exportPDF;
-    document.getElementById("add-item-btn").onclick = addNewItem;
-    document.getElementById("analyze-pdf-btn").onclick = analyzePDF;
-    document.getElementById("approve-changes-btn").onclick = approvePriceChanges;
-    document.getElementById("cancel-changes-btn").onclick = () => {
-        document.getElementById("price-changes-container").classList.add("hidden");
-        pendingPriceChanges = [];
-    };
-    document.getElementById("modal-close").onclick = closeModal;
-
-    // Tab switching
-    document.querySelectorAll(".tab-btn").forEach(btn => {
-        btn.onclick = (e) => {
-            document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
-            document.querySelectorAll(".tab-content").forEach(c => c.classList.add("hidden"));
-            e.target.classList.add("active");
-            const tab = e.target.dataset.tab;
-            document.getElementById(tab + "-tab").classList.remove("hidden");
-            if (tab === "export") renderAdminOrders();
-            if (tab === "products") renderMenuEditor();
-            if (tab === "scheduling") renderScheduling();
-        };
-    });
-
-    // ========== INIT ==========
-    init();
 </script>
 </body>
 </html>
