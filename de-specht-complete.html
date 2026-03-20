@@ -47,6 +47,16 @@
         <div id="restaurants-grid" class="space-y-3 mb-4"></div>
     </div>
 
+    <!-- GLOBAL ADMIN SCREEN -->
+    <div id="global-admin-screen" class="hidden">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-2xl font-black">Globaal Beheer</h2>
+            <button id="back-from-global-admin-btn" class="text-xs text-white bg-gray-800 px-4 py-2 rounded-full font-bold">Terug</button>
+        </div>
+
+        <div id="global-admin-content"></div>
+    </div>
+
     <!-- MENU SCREEN (Same as before) -->
     <div id="menu-screen" class="hidden">
         <div class="flex justify-between items-center mb-4">
@@ -949,16 +959,78 @@
         if (cart.length > 0) document.getElementById("cart-footer").classList.remove("hidden");
     }
 
+    function showGlobalAdmin() {
+        document.getElementById("home-screen").classList.add("hidden");
+        document.getElementById("global-admin-screen").classList.remove("hidden");
+        document.getElementById("menu-screen").classList.add("hidden");
+        renderGlobalAdmin();
+    }
+
+    function renderGlobalAdmin() {
+        const container = document.getElementById("global-admin-content");
+        container.innerHTML = `
+            <div class="space-y-4">
+                <h3 class="font-bold text-lg mb-4">Restaurants Beheren</h3>
+                
+                <div id="global-restaurants-list" class="space-y-3"></div>
+                
+                <button id="add-restaurant-btn" class="w-full bg-green-500 text-white py-3 rounded-xl font-bold hover:bg-green-600">
+                    + Nieuw Restaurant
+                </button>
+            </div>
+        `;
+
+        const list = document.getElementById("global-restaurants-list");
+        restaurants.forEach((r, idx) => {
+            const card = document.createElement("div");
+            card.className = "bg-white p-4 rounded-xl border border-gray-200";
+            card.innerHTML = `
+                <div class="flex justify-between items-start mb-3">
+                    <div class="flex-1">
+                        <h4 class="font-bold">${r.name}</h4>
+                        <p class="text-sm text-gray-500">${r.address}</p>
+                    </div>
+                    <button class="text-red-500 font-bold text-sm hover:text-red-700">×</button>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <button class="text-xs bg-blue-100 text-blue-700 py-2 rounded font-bold hover:bg-blue-200">
+                        📝 Menu
+                    </button>
+                    <button class="text-xs bg-purple-100 text-purple-700 py-2 rounded font-bold hover:bg-purple-200">
+                        📊 Bestellingen
+                    </button>
+                </div>
+            `;
+            list.appendChild(card);
+        });
+
+        document.getElementById("add-restaurant-btn").onclick = () => {
+            const name = prompt("Restaurant naam:");
+            if (!name) return;
+            const address = prompt("Adres:");
+            if (!address) return;
+            
+            const newId = `restaurant_${Date.now()}`;
+            restaurants.push({ id: newId, name, address });
+            localStorage.setItem(`menu_${newId}`, JSON.stringify(JSON.parse(JSON.stringify(defaultMenuData))));
+            localStorage.setItem(`orders_${newId}`, JSON.stringify([]));
+            restaurantSchedule[newId] = [1,1,1,1,1,1,1];
+            saveScheduling();
+            
+            renderGlobalAdmin();
+            renderRestaurants();
+        };
+    }
+
     function backToHome() {
         currentRestaurant = null;
         cart = [];
         currentCategory = "All";
         document.getElementById("menu-screen").classList.add("hidden");
+        document.getElementById("global-admin-screen").classList.add("hidden");
         document.getElementById("home-screen").classList.remove("hidden");
         document.getElementById("cart-footer").classList.add("hidden");
     }
-
-    function editCart() {
         document.getElementById("menu-screen").classList.add("hidden");
         document.getElementById("cart-edit-screen").classList.remove("hidden");
         document.getElementById("cart-footer").classList.add("hidden");
@@ -1039,6 +1111,7 @@
         backToHome();
     };
 
+    document.getElementById("back-from-global-admin-btn").onclick = backToHome;
     document.getElementById("toggle-orders-btn").onclick = showOrders;
     document.getElementById("back-from-orders-btn").onclick = showMenuScreen;
     document.getElementById("toggle-admin-btn").onclick = showAdmin;
