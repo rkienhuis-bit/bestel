@@ -187,6 +187,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs
 const RESTAURANT_ID   = "vistaria";
 const RESTAURANT_NAME = "Vistaria Enter";
 const ADMIN_PASSWORD  = "Ipex26";
+const SHEET_URL       = "https://script.google.com/macros/s/AKfycbzDsYVIgQ5r1EhLG4_7C7Wd4uhIjcb6blVGgY9q-iZn80Pk3p1_N3y4OYf0KayWdlt3WA/exec";
 const LS_USER         = "lunch_user_vistaria";
 const LS_ORDERS       = "lunch_orders_vistaria";
 const LS_MENU         = "lunch_menu_vistaria";
@@ -243,11 +244,40 @@ function loadMenuData() {
 }
 function saveMenuData() { localStorage.setItem(LS_MENU, JSON.stringify(menuData)); }
 
-function loadOrders() {
-    const s = localStorage.getItem(LS_ORDERS);
-    orders = s ? JSON.parse(s) : [];
+// orders komen uit Google Sheet
+async function loadOrders() {
+    try {
+        const res = await fetch(`${SHEET_URL}?restaurant=${RESTAURANT_ID}`);
+        const data = await res.json();
+        const today = new Date().toDateString();
+        orders = data
+            .filter(row => row.Restaurant === RESTAURANT_ID && new Date(row.Datum + " " + row.Tijd).toDateString() === today)
+            .map(row => ({
+                user: row.Naam,
+                items: JSON.parse(row.Items || "[]"),
+                total: parseFloat(row.Bedrag) || 0,
+                date: row.Datum + "T" + row.Tijd
+            }));
+    } catch(e) {
+        console.error("Fout bij laden bestellingen:", e);
+        orders = [];
+    }
 }
-function saveOrders() { localStorage.setItem(LS_ORDERS, JSON.stringify(orders)); }
+async function saveOrder(order) {
+    const now = new Date();
+    await fetch(SHEET_URL, {
+        method: "POST",
+        body: JSON.stringify({
+            datum: now.toLocaleDateString("nl-NL"),
+            tijd: now.toLocaleTimeString("nl-NL"),
+            restaurant: RESTAURANT_ID,
+            naam: order.user,
+            items: JSON.stringify(order.items),
+            bestelling: order.items.reduce((a,c) => { a[c.name]=(a[c.name]||0)+1; return a; }, {}),
+            bedrag: order.total.toFixed(2)
+        })
+    });
+}
 
 // ============================================================
 // SCREENS
@@ -264,8 +294,10 @@ function showMenu() {
     renderCategories();
     renderMenu();
 }
-function showOrders()  {
+async function showOrders() {
     showScreen("orders-screen");
+    document.getElementById("public-orders-list").innerHTML = '<p class="text-center text-gray-400 py-8">⏳ Bestellingen laden...</p>';
+    await loadOrders();
     renderPublicOrders();
 }
 function showAdmin()   {
@@ -283,13 +315,12 @@ function showCartEdit() {
 // ============================================================
 // LOGIN
 // ============================================================
-function doLogin() {
+async function doLogin() {
     const name = document.getElementById("username").value.trim();
     if (!name) return;
     currentUser = name;
     localStorage.setItem(LS_USER, name);
     loadMenuData();
-    loadOrders();
     document.getElementById("greeting").textContent = `Hoi ${name} 👋`;
     showMenu();
 }
@@ -394,13 +425,18 @@ function renderPublicOrders() {
 // ============================================================
 // SUBMIT ORDER
 // ============================================================
-function submitOrder() {
+async function submitOrder() {
     if (!cart.length) return;
-    orders.push({ user: currentUser, items: [...cart], total: cart.reduce((s,i)=>s+i.price,0), date: new Date().toISOString() });
-    saveOrders();
-    cart = [];
-    showModal(`🍟<h2 class="text-xl font-bold mt-2">Smakelijk!</h2><p class="text-gray-400 text-sm mt-1">Bestelling geplaatst.</p>`, true);
-    showMenu();
+    const order = { user: currentUser, items: [...cart], total: cart.reduce((s,i)=>s+i.price,0), date: new Date().toISOString() };
+    showModal(`⏳<p class="text-gray-500 mt-2">Bestelling versturen...</p>`, false);
+    try {
+        await saveOrder(order);
+        cart = [];
+        showModal(`🍟<h2 class="text-xl font-bold mt-2">Smakelijk!</h2><p class="text-gray-400 text-sm mt-1">Bestelling geplaatst.</p>`, true);
+        showMenu();
+    } catch(e) {
+        showModal(`❌<p class="text-red-500 mt-2">Fout bij versturen. Probeer opnieuw.</p>`, true);
+    }
 }
 
 // ============================================================
@@ -537,7 +573,8 @@ function clearOrders() {
 // ============================================================
 // PDF EXPORT
 // ============================================================
-function exportPDF() {
+async function exportPDF() {
+    await loadOrders();
     const today = new Date().toDateString();
     const todayOrders = orders.filter(o => new Date(o.date).toDateString() === today);
     if (!todayOrders.length) { alert("Geen bestellingen om te exporteren."); return; }
@@ -716,7 +753,6 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
 // INIT
 // ============================================================
 loadMenuData();
-loadOrders();
 if (currentUser) {
     document.getElementById("greeting").textContent = `Hoi ${currentUser} 👋`;
     showMenu();
