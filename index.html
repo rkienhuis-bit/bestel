@@ -6,31 +6,42 @@
     <title>Lunch App</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #F7F7F9; margin: 0; }
-        .restaurant-card { background: white; border-radius: 20px; padding: 22px 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.07); border: 1px solid #f0f0f0; transition: transform 0.18s, box-shadow 0.18s; cursor: pointer; text-decoration: none; display: block; }
-        .restaurant-card:hover:not(.closed) { transform: translateY(-4px); box-shadow: 0 10px 24px rgba(0,0,0,0.13); }
+        * { box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f6f9; margin: 0; }
+        .site-header { background: #1a2e4a; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; }
+        .site-header-left h1 { font-size: 18px; font-weight: 800; color: white; margin: 0; letter-spacing: 0.3px; }
+        .site-header-left p { font-size: 11px; color: rgba(255,255,255,0.55); margin: 2px 0 0 0; }
+        .site-header-logo { height: 38px; width: auto; object-fit: contain; }
+        .date-bar { background: #f0a500; color: #1a2e4a; text-align: center; font-size: 11px; font-weight: 700; padding: 7px; letter-spacing: 0.5px; text-transform: uppercase; }
+        .restaurant-card { background: white; border-radius: 16px; padding: 18px 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: 1px solid #e8edf3; transition: transform 0.18s, box-shadow 0.18s; cursor: pointer; text-decoration: none; display: block; }
+        .restaurant-card:hover:not(.closed) { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,0.11); }
         .restaurant-card.closed { opacity: 0.45; cursor: not-allowed; }
         .day-btn { font-size: 10px; font-weight: 700; padding: 5px 2px; border-radius: 7px; border: 2px solid; transition: all 0.1s; cursor: pointer; }
         .day-btn.open { background: #dcfce7; color: #15803d; border-color: #86efac; }
         .day-btn.closed-day { background: #fee2e2; color: #dc2626; border-color: #fca5a5; }
-        .day-btn.today { ring: 2px; outline: 2px solid #374151; outline-offset: 2px; }
+        .day-btn.today { outline: 2px solid #1a2e4a; outline-offset: 2px; }
         .modal-overlay { background: rgba(0,0,0,0.55); display: none; position: fixed; top:0; left:0; right:0; bottom:0; z-index:100; align-items:center; justify-content:center; backdrop-filter:blur(4px); }
         .modal-overlay.show { display: flex; }
+        #admin-btn { background: rgba(255,255,255,0.12); border: none; color: white; width: 32px; height: 32px; border-radius: 8px; cursor: pointer; font-size: 15px; display: flex; align-items: center; justify-content: center; }
     </style>
 </head>
 <body class="min-h-screen">
 
-<div class="container mx-auto max-w-md p-5 pb-20">
-    <div class="text-center mb-8 pt-6">
-        <h1 class="text-4xl font-black mb-1">🍽️ Lunch</h1>
-        <p id="today-label" class="text-gray-400 text-sm font-semibold"></p>
+<div class="site-header">
+    <div class="site-header-left">
+        <h1>IPEX Lunch</h1>
+        <p>Kies een eetgelegenheid</p>
     </div>
+    <img src="https://a.storyblok.com/f/185701/218x218/223e1772d3/ipex-logo.png" class="site-header-logo" alt="IPEX" />
+</div>
+<div class="date-bar" id="today-label"></div>
 
-    <button id="admin-btn" class="fixed top-5 right-5 text-2xl opacity-60 hover:opacity-100 transition-opacity">⚙️</button>
-
-    <div id="restaurants-grid" class="space-y-4"></div>
-
-    <p id="all-closed-msg" class="hidden text-center text-gray-400 text-sm mt-10 py-8">
+<div style="max-width:480px;margin:0 auto;padding:20px 16px 80px;">
+    <div style="display:flex;justify-content:flex-end;margin-bottom:16px;">
+        <button id="admin-btn">⚙️</button>
+    </div>
+    <div id="restaurants-grid" class="space-y-4" style="display:flex;flex-direction:column;gap:12px;"></div>
+    <p id="all-closed-msg" class="hidden" style="display:none;text-align:center;color:#8a9ab0;font-size:14px;margin-top:40px;">
         Vandaag zijn alle eetgelegenheden gesloten.
     </p>
 </div>
@@ -113,7 +124,7 @@
         const grid = document.getElementById("restaurants-grid");
         grid.innerHTML = "";
         document.getElementById("today-label").textContent =
-            new Date().toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "long" });
+            new Date().toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "long" }).toUpperCase();
 
         let anyOpen = false;
         restaurants.forEach(r => {
@@ -124,24 +135,24 @@
             a.className = `restaurant-card ${isOpen ? "" : "closed"}`;
             a.onclick = isOpen ? null : (e) => e.preventDefault();
             a.innerHTML = `
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-3">
-                        <span class="text-3xl">${r.emoji}</span>
+                <div style="display:flex;align-items:center;justify-content:space-between;">
+                    <div style="display:flex;align-items:center;gap:12px;">
+                        <span style="font-size:26px;">${r.emoji}</span>
                         <div>
-                            <h3 class="font-black text-gray-900 text-base leading-tight">${r.name}</h3>
-                            <p class="text-xs text-gray-400 font-medium">${r.address}</p>
+                            <div style="font-weight:800;color:#1a2e4a;font-size:15px;">${r.name}</div>
+                            <div style="font-size:12px;color:#8a9ab0;margin-top:2px;">${r.address}</div>
                         </div>
                     </div>
-                    <div class="flex flex-col items-end gap-1">
-                        <span class="text-xs font-bold px-3 py-1 rounded-full ${isOpen ? "bg-green-100 text-green-700" : "bg-red-100 text-red-500"}">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <span style="font-size:11px;font-weight:700;padding:5px 12px;border-radius:20px;${isOpen ? "background:#e6f4ea;color:#2d7a3a;" : "background:#fce8e8;color:#c0392b;"}">
                             ${isOpen ? "Open ✓" : "Gesloten"}
                         </span>
-                        <span class="text-gray-300 text-sm">${isOpen ? "→" : ""}</span>
+                        ${isOpen ? '<span style="color:#1a2e4a;opacity:0.3;font-size:18px;">›</span>' : ""}
                     </div>
                 </div>`;
             grid.appendChild(a);
         });
-        document.getElementById("all-closed-msg").classList.toggle("hidden", anyOpen);
+        document.getElementById("all-closed-msg").style.display = anyOpen ? "none" : "block";
     }
 
     // ===== ADMIN MODAL =====

@@ -8,12 +8,12 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #F7F7F9; margin: 0; padding-bottom: 160px; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f6f9; margin: 0; padding-bottom: 160px; }
         .menu-item { background: white; border: 1px solid #f0f0f0; transition: all 0.15s ease; }
         .menu-item:active { transform: scale(0.97); }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        .cat-btn.active { background-color: #FF5A5F; color: white; border-color: #FF5A5F; }
+        .cat-btn.active { background-color: #1a2e4a; color: white; border-color: #1a2e4a; }
         .modal-overlay { background: rgba(0,0,0,0.6); display: none; position: fixed; top:0; left:0; right:0; bottom:0; z-index:100; align-items:center; justify-content:center; backdrop-filter:blur(4px); overflow-y:auto; }
         .tab-btn { padding: 10px 13px; border: none; background: white; border-bottom: 3px solid transparent; cursor: pointer; font-weight: 600; font-size: 13px; white-space: nowrap; }
         .tab-btn.active { border-bottom-color: #FF5A5F; color: #FF5A5F; }
@@ -22,21 +22,30 @@
         .price-change.lower { background: #DBEAFE; border-color: #93C5FD; }
         .screen { display: none; }
         .screen.active { display: block; }
+        .site-header { background: #1a2e4a; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; }
+        .site-header-title { color: white; font-size: 17px; font-weight: 800; margin: 0; letter-spacing: 0.3px; }
+        .site-header-sub { color: rgba(255,255,255,0.5); font-size: 11px; margin: 2px 0 0 0; }
+        .site-header-logo { height: 36px; width: auto; object-fit: contain; }
+        body { background: #f4f6f9; }
     </style>
 </head>
 <body>
 
 <!-- ===================== LOGIN ===================== -->
 <div id="login-screen" class="screen container mx-auto max-w-md p-5">
-    <div class="text-center mb-8 pt-8">
-        <div class="text-5xl mb-3">🍟</div>
-        <h1 class="text-3xl font-black mb-1">De Specht</h1>
-        <p class="text-gray-400 text-sm">Goor</p>
+    <div class="site-header">
+        <div>
+            <p class="site-header-title">De Specht</p>
+            <p class="site-header-sub">Goor</p>
+        </div>
+        <img src="https://a.storyblok.com/f/185701/218x218/223e1772d3/ipex-logo.png" class="site-header-logo" alt="IPEX" />
     </div>
+    <div style="margin-top:24px;">
     <div class="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
         <h2 class="text-xl font-bold mb-4 text-center">Hoe heet je?</h2>
-        <input type="text" id="username" class="w-full p-4 border border-gray-200 rounded-2xl mb-4 outline-none focus:ring-2 focus:ring-red-400 text-base" placeholder="Jouw naam">
-        <button id="login-btn" class="bg-[#FF5A5F] text-white w-full py-4 rounded-2xl font-bold text-lg hover:bg-[#FF3E46]">Start Bestellen</button>
+        <input type="text" id="username" class="w-full p-4 border border-gray-200 rounded-2xl mb-4 outline-none focus:ring-2 focus:ring-blue-300 text-base" placeholder="Jouw naam">
+        <button id="login-btn" class="bg-[#1a2e4a] text-white w-full py-4 rounded-2xl font-bold text-lg hover:bg-[#243d61]">Start Bestellen</button>
+    </div>
     </div>
     <div class="text-center mt-6">
         <a href="index.html" class="text-xs text-gray-400 hover:text-gray-600">← Terug naar overzicht</a>
@@ -45,10 +54,16 @@
 
 <!-- ===================== MENU ===================== -->
 <div id="menu-screen" class="screen container mx-auto max-w-md p-5">
-    <div class="flex justify-between items-center mb-3">
-        <a href="index.html" class="text-xs text-gray-600 font-black bg-white border border-gray-200 px-3 py-2 rounded-xl no-underline">← Home</a>
-        <span class="text-base font-black">🍟 De Specht</span>
-        <button id="toggle-orders-btn" class="text-[10px] text-gray-600 font-black bg-white border border-gray-200 px-3 py-2 rounded-xl">📋</button>
+    <div class="site-header" style="margin-bottom:0;">
+        <div style="display:flex;align-items:center;gap:10px;">
+            <a href="index.html" style="color:rgba(255,255,255,0.7);font-size:13px;font-weight:700;text-decoration:none;">← Home</a>
+            <span style="color:rgba(255,255,255,0.3);">|</span>
+            <span class="site-header-title">De Specht</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+            <button id="toggle-orders-btn" style="background:rgba(255,255,255,0.15);border:none;color:white;padding:6px 10px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;">📋</button>
+            <img src="https://a.storyblok.com/f/185701/218x218/223e1772d3/ipex-logo.png" class="site-header-logo" alt="IPEX" style="height:28px;" />
+        </div>
     </div>
     <div class="flex justify-between items-center mb-4">
         <button id="toggle-admin-btn" class="text-[10px] text-gray-600 font-black bg-white border border-gray-200 px-3 py-2 rounded-xl">⚙️ Beheer</button>
@@ -56,7 +71,7 @@
         <button id="logout-btn" class="text-[10px] text-red-400 font-black hover:text-red-500">Wijzig Naam</button>
     </div>
     <div class="sticky top-0 bg-[#F7F7F9] pt-2 pb-4 z-40">
-        <input type="text" id="menu-search" placeholder="Zoeken..." class="w-full p-4 rounded-2xl border border-gray-200 outline-none focus:ring-2 focus:ring-red-300 mb-3 text-sm">
+        <input type="text" id="menu-search" placeholder="Zoeken..." class="w-full p-4 rounded-2xl border border-gray-200 outline-none focus:ring-2 focus:ring-blue-300 mb-3 text-sm">
         <div id="category-bar" class="flex gap-2 overflow-x-auto hide-scrollbar pb-2"></div>
     </div>
     <div id="menu-container"></div>
@@ -69,10 +84,10 @@
         <button id="back-from-orders-btn" class="text-xs text-white bg-gray-800 px-4 py-2 rounded-full font-bold">Terug</button>
     </div>
     <div id="public-orders-list" class="space-y-2 mb-4"></div>
-    <div class="p-6 bg-gradient-to-br from-red-50 to-orange-50 rounded-3xl border border-red-100">
+    <div class="p-6 bg-gradient-to-br from-blue-50 to-slate-50 rounded-3xl border border-blue-100">
         <div class="flex justify-between items-center">
             <span class="text-gray-500 font-bold uppercase text-[10px]">Totaal Vandaag</span>
-            <span class="text-4xl font-black text-[#FF5A5F]">€<span id="public-grand-total">0.00</span></span>
+            <span class="text-4xl font-black text-[#f0a500]">€<span id="public-grand-total">0.00</span></span>
         </div>
     </div>
 </div>
@@ -99,13 +114,13 @@
 
         <!-- EXPORT TAB -->
         <div id="export-tab" class="tab-content">
-            <button id="export-pdf-btn" class="w-full text-white bg-[#FF5A5F] px-4 py-3 rounded-xl font-bold mb-3 hover:bg-[#FF3E46]">📄 Download PDF Bon</button>
+            <button id="export-pdf-btn" class="w-full text-white bg-[#1a2e4a] px-4 py-3 rounded-xl font-bold mb-3 hover:bg-[#243d61]">📄 Download PDF Bon</button>
             <button id="clear-orders-btn" class="w-full text-red-500 bg-red-50 border border-red-200 px-4 py-2 rounded-xl font-bold mb-4 text-sm hover:bg-red-100">🗑️ Alle bestellingen wissen</button>
             <div id="admin-orders-list" class="space-y-2"></div>
-            <div class="mt-4 p-6 bg-gradient-to-br from-red-50 to-orange-50 rounded-3xl border border-red-100">
+            <div class="mt-4 p-6 bg-gradient-to-br from-blue-50 to-slate-50 rounded-3xl border border-blue-100">
                 <div class="flex justify-between items-center">
                     <span class="text-gray-500 font-bold uppercase text-[10px]">Totaal Vandaag</span>
-                    <span class="text-4xl font-black text-[#FF5A5F]">€<span id="admin-grand-total">0.00</span></span>
+                    <span class="text-4xl font-black text-[#f0a500]">€<span id="admin-grand-total">0.00</span></span>
                 </div>
             </div>
         </div>
@@ -146,13 +161,13 @@
         <button id="back-to-menu-from-cart-btn" class="text-xs text-white bg-gray-800 px-4 py-2 rounded-full font-bold">Terug</button>
     </div>
     <div id="cart-edit-container" class="space-y-3 mb-6"></div>
-    <div class="p-6 bg-gradient-to-br from-red-50 to-orange-50 rounded-3xl border border-red-100 mb-4">
+    <div class="p-6 bg-gradient-to-br from-blue-50 to-slate-50 rounded-3xl border border-blue-100 mb-4">
         <div class="flex justify-between items-center">
             <span class="text-gray-500 font-bold uppercase text-[10px]">Totaal</span>
-            <span class="text-4xl font-black text-[#FF5A5F]">€<span id="cart-edit-total">0.00</span></span>
+            <span class="text-4xl font-black text-[#f0a500]">€<span id="cart-edit-total">0.00</span></span>
         </div>
     </div>
-    <button id="confirm-order-btn" class="w-full bg-[#FF5A5F] text-white py-4 rounded-2xl font-black text-lg hover:bg-[#FF3E46] mb-3">Bestelling Bevestigen</button>
+    <button id="confirm-order-btn" class="w-full bg-[#1a2e4a] text-white py-4 rounded-2xl font-black text-lg hover:bg-[#243d61] mb-3">Bestelling Bevestigen</button>
     <button id="cancel-order-btn" class="w-full bg-gray-200 text-gray-700 py-3 rounded-2xl font-bold hover:bg-gray-300">Annuleren</button>
 </div>
 
@@ -161,11 +176,11 @@
     <div class="container mx-auto max-w-md flex justify-between items-center gap-4">
         <div>
             <div class="text-[10px] text-gray-400 font-black uppercase">Totaal</div>
-            <div class="text-3xl font-black text-[#FF5A5F]">€<span id="total-price">0.00</span></div>
+            <div class="text-3xl font-black text-[#f0a500]">€<span id="total-price">0.00</span></div>
         </div>
         <div class="flex gap-2">
             <button id="edit-cart-btn" class="bg-gray-500 text-white px-6 py-4 rounded-2xl font-black shadow-lg hover:bg-gray-600">✏️ Wijzig</button>
-            <button id="send-btn" class="bg-[#FF5A5F] text-white px-6 py-4 rounded-2xl font-black shadow-lg hover:bg-[#FF3E46]">Bestellen</button>
+            <button id="send-btn" class="bg-[#1a2e4a] text-white px-6 py-4 rounded-2xl font-black shadow-lg hover:bg-[#243d61]">Bestellen</button>
         </div>
     </div>
 </div>
@@ -484,7 +499,7 @@ function renderMenu() {
             div.innerHTML = `
                 <div class="flex-1">
                     <h3 class="font-bold text-gray-800 text-sm">${item.name}</h3>
-                    <div class="text-[#FF5A5F] font-black text-xs mt-1">€${item.price.toFixed(2)}</div>
+                    <div class="text-[#f0a500] font-black text-xs mt-1">€${item.price.toFixed(2)}</div>
                 </div>
                 <div class="flex items-center bg-gray-50 rounded-2xl p-1">
                     ${count > 0 ? `<button class="btn-minus w-8 h-8 flex items-center justify-center font-bold text-gray-400 text-lg">−</button>
@@ -537,7 +552,7 @@ function renderPublicOrders() {
                     <div class="font-bold text-gray-800 text-sm">${o.user}</div>
                     <div class="text-xs text-gray-500 mt-1">${str}</div>
                 </div>
-                <div class="font-black text-[#FF5A5F] text-sm ml-3">€${o.total.toFixed(2)}</div>
+                <div class="font-black text-[#f0a500] text-sm ml-3">€${o.total.toFixed(2)}</div>
             </div>`;
         list.appendChild(card);
     });
@@ -633,7 +648,7 @@ async function renderAdminOrders() {
             <div class="flex-1">
                 <div class="flex justify-between items-center">
                     <span class="font-bold text-sm">${o.user}</span>
-                    <span class="font-black text-[#FF5A5F] text-sm">€${o.total.toFixed(2)}</span>
+                    <span class="font-black text-[#f0a500] text-sm">€${o.total.toFixed(2)}</span>
                 </div>
                 <div class="text-xs text-gray-500 mt-1">${str}</div>
             </div>
