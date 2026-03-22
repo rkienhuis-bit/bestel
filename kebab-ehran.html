@@ -267,18 +267,17 @@ async function loadOrders() {
 }
 async function saveOrder(order) {
     const now = new Date();
-    await fetch(SHEET_URL, {
-        method: "POST",
-        body: JSON.stringify({
-            datum: now.toLocaleDateString("nl-NL"),
-            tijd: now.toLocaleTimeString("nl-NL"),
-            restaurant: RESTAURANT_ID,
-            naam: order.user,
-            items: JSON.stringify(order.items),
-            bestelling: order.items.reduce((a,c) => { a[c.name]=(a[c.name]||0)+1; return a; }, {}),
-            bedrag: order.total.toFixed(2)
-        })
-    });
+    const payload = {
+        datum: now.toLocaleDateString("nl-NL"),
+        tijd: now.toLocaleTimeString("nl-NL"),
+        restaurant: RESTAURANT_ID,
+        naam: order.user,
+        items: JSON.stringify(order.items),
+        bestelling: order.items.reduce((a,c) => { a[c.name]=(a[c.name]||0)+1; return a; }, {}),
+        bedrag: order.total.toFixed(2)
+    };
+    const url = SHEET_URL + "?" + new URLSearchParams(payload).toString();
+    await fetch(url, { method: "GET", mode: "no-cors" });
 }
 
 // ============================================================
