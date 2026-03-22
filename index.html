@@ -66,52 +66,65 @@
 
 <script>
     const ADMIN_PASSWORD = "Ipex26";
+    const SHEET_URL = "https://script.google.com/macros/s/AKfycbzDsYVIgQ5r1EhLG4_7C7Wd4uhIjcb6blVGgY9q-iZn80Pk3p1_N3y4OYf0KayWdlt3WA/exec";
     const DAY_NAMES_SHORT = ["Ma","Di","Wo","Do","Vr","Za","Zo"];
     const DAY_NAMES_FULL  = ["Maandag","Dinsdag","Woensdag","Donderdag","Vrijdag","Zaterdag","Zondag"];
 
-    // todayIdx: 0=Ma … 6=Zo
     const jsDay = new Date().getDay();
     const todayIdx = jsDay === 0 ? 6 : jsDay - 1;
 
-    // ===== RESTAURANT CONFIG =====
-    // schedule: array[7], 0=open 1=gesloten (Ma-Zo)
     const DEFAULT_RESTAURANTS = [
-        { id: "specht",       name: "De Specht",        address: "Goor",   emoji: "🍟", file: "specht.html",       schedule: [0,0,0,0,0,1,1] },
-        { id: "vistaria",     name: "Vistaria Enter",   address: "Enter",  emoji: "🐟", file: "vistaria.html",     schedule: [0,0,0,0,0,1,1] },
-        { id: "kebab-ehran",  name: "Kebab van Ehran",  address: "Enter",  emoji: "🥙", file: "kebab-ehran.html",  schedule: [0,0,0,0,0,1,1] }
+        { id: "specht",      name: "De Specht",       address: "Goor",  emoji: "🍟", file: "specht.html",      schedule: [0,0,0,0,0,1,1] },
+        { id: "vistaria",    name: "Vistaria Enter",  address: "Enter", emoji: "🐟", file: "vistaria.html",    schedule: [0,0,0,0,0,1,1] },
+        { id: "kebab-ehran", name: "Kebab van Ehran", address: "Enter", emoji: "🥙", file: "kebab-ehran.html", schedule: [0,0,0,0,0,1,1] }
     ];
 
-    function loadRestaurants() {
-        const saved = localStorage.getItem("lunchHubRestaurants");
-        return saved ? JSON.parse(saved) : DEFAULT_RESTAURANTS;
-    }
-    function saveRestaurants(list) {
-        localStorage.setItem("lunchHubRestaurants", JSON.stringify(list));
+    let restaurants = JSON.parse(JSON.stringify(DEFAULT_RESTAURANTS));
+
+    // ===== SHEET: SCHEDULING LADEN =====
+    async function loadSchedule() {
+        try {
+            const res = await fetch(`${SHEET_URL}?action=getSchedule`);
+            const data = await res.json();
+            // Merge sheet schedule into restaurants
+            restaurants.forEach(r => {
+                if (data[r.id]) {
+                    r.schedule = JSON.parse(data[r.id]);
+                }
+            });
+        } catch(e) {
+            console.warn("Schedule laden mislukt, gebruik defaults:", e);
+        }
     }
 
-    let restaurants = loadRestaurants();
+    // ===== SHEET: SCHEDULING OPSLAAN =====
+    async function saveSchedule(restaurantId, schedule) {
+        try {
+            await fetch(`${SHEET_URL}?action=saveSchedule&id=${restaurantId}&schedule=${encodeURIComponent(JSON.stringify(schedule))}`, {
+                mode: "no-cors"
+            });
+        } catch(e) {
+            console.warn("Schedule opslaan mislukt:", e);
+        }
+        // Ook lokaal cachen als fallback
+        localStorage.setItem("lunchSchedule_" + restaurantId, JSON.stringify(schedule));
+    }
 
     // ===== RENDER HOME =====
     function render() {
         const grid = document.getElementById("restaurants-grid");
         grid.innerHTML = "";
-
-        // Today label
-        const today = new Date();
         document.getElementById("today-label").textContent =
-            today.toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "long" });
+            new Date().toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "long" });
 
         let anyOpen = false;
-
         restaurants.forEach(r => {
             const isOpen = r.schedule[todayIdx] === 0;
             if (isOpen) anyOpen = true;
-
             const a = document.createElement("a");
             a.href = isOpen ? r.file : "#";
             a.className = `restaurant-card ${isOpen ? "" : "closed"}`;
             a.onclick = isOpen ? null : (e) => e.preventDefault();
-
             a.innerHTML = `
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-3">
@@ -127,11 +140,9 @@
                         </span>
                         <span class="text-gray-300 text-sm">${isOpen ? "→" : ""}</span>
                     </div>
-                </div>
-            `;
+                </div>`;
             grid.appendChild(a);
         });
-
         document.getElementById("all-closed-msg").classList.toggle("hidden", anyOpen);
     }
 
@@ -147,17 +158,14 @@
         document.getElementById("admin-modal").classList.remove("show");
     };
     document.getElementById("admin-modal").onclick = (e) => {
-        if (e.target === document.getElementById("admin-modal")) {
+        if (e.target === document.getElementById("admin-modal"))
             document.getElementById("admin-modal").classList.remove("show");
-        }
     };
-
     document.getElementById("admin-pw-btn").onclick = checkPassword;
     document.getElementById("admin-pw-input").onkeydown = (e) => { if (e.key === "Enter") checkPassword(); };
 
     function checkPassword() {
-        const val = document.getElementById("admin-pw-input").value;
-        if (val === ADMIN_PASSWORD) {
+        if (document.getElementById("admin-pw-input").value === ADMIN_PASSWORD) {
             document.getElementById("admin-password-section").classList.add("hidden");
             document.getElementById("admin-schedule-section").classList.remove("hidden");
             renderScheduleGrid();
@@ -170,7 +178,6 @@
     function renderScheduleGrid() {
         const grid = document.getElementById("schedule-grid");
         grid.innerHTML = "";
-
         restaurants.forEach((r, rIdx) => {
             const div = document.createElement("div");
             div.innerHTML = `
@@ -179,12 +186,9 @@
                     <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${r.schedule[todayIdx] === 0 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"}">
                         Vandaag: ${r.schedule[todayIdx] === 0 ? "Open" : "Gesloten"}
                     </span>
-                </div>
-            `;
-
+                </div>`;
             const daysRow = document.createElement("div");
             daysRow.className = "grid grid-cols-7 gap-1";
-
             DAY_NAMES_SHORT.forEach((day, dIdx) => {
                 const isOpen = r.schedule[dIdx] === 0;
                 const isToday = dIdx === todayIdx;
@@ -192,35 +196,27 @@
                 btn.className = `day-btn ${isOpen ? "open" : "closed-day"} ${isToday ? "today" : ""}`;
                 btn.title = DAY_NAMES_FULL[dIdx];
                 btn.textContent = day;
-                btn.onclick = () => {
+                btn.onclick = async () => {
                     restaurants[rIdx].schedule[dIdx] = restaurants[rIdx].schedule[dIdx] === 0 ? 1 : 0;
-                    saveRestaurants(restaurants);
+                    await saveSchedule(r.id, restaurants[rIdx].schedule);
                     renderScheduleGrid();
                     render();
                 };
                 daysRow.appendChild(btn);
             });
-
             div.appendChild(daysRow);
             grid.appendChild(div);
         });
     }
 
     // ===== ADD RESTAURANT =====
-    document.getElementById("add-restaurant-btn").onclick = () => {
+    document.getElementById("add-restaurant-btn").onclick = async () => {
         const name = document.getElementById("new-restaurant-name").value.trim();
         const file = document.getElementById("new-restaurant-file").value.trim();
         if (!name || !file) { alert("Vul naam én bestandsnaam in."); return; }
-
-        restaurants.push({
-            id: file,
-            name: name,
-            address: "",
-            emoji: "🍽️",
-            file: file + ".html",
-            schedule: [0,0,0,0,0,1,1]
-        });
-        saveRestaurants(restaurants);
+        const r = { id: file, name, address: "", emoji: "🍽️", file: file + ".html", schedule: [0,0,0,0,0,1,1] };
+        restaurants.push(r);
+        await saveSchedule(r.id, r.schedule);
         document.getElementById("new-restaurant-name").value = "";
         document.getElementById("new-restaurant-file").value = "";
         renderScheduleGrid();
@@ -228,7 +224,19 @@
     };
 
     // ===== INIT =====
-    render();
+    async function init() {
+        // Toon eerst met lokale cache als fallback
+        restaurants.forEach(r => {
+            const cached = localStorage.getItem("lunchSchedule_" + r.id);
+            if (cached) r.schedule = JSON.parse(cached);
+        });
+        render();
+        // Daarna echte data uit Sheet laden
+        await loadSchedule();
+        render();
+    }
+
+    init();
 </script>
 </body>
 </html>

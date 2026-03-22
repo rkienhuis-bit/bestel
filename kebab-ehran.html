@@ -249,7 +249,7 @@ function saveMenuData() { localStorage.setItem(LS_MENU, JSON.stringify(menuData)
 // orders komen uit Google Sheet
 async function loadOrders() {
     try {
-        const res = await fetch(`${SHEET_URL}?restaurant=${RESTAURANT_ID}`);
+        const res = await fetch(`${SHEET_URL}?restaurant=${RESTAURANT_ID}`, { mode: "cors" });
         const data = await res.json();
         const today = new Date().toDateString();
         orders = data
