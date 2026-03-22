@@ -249,16 +249,17 @@ function saveMenuData() { localStorage.setItem(LS_MENU, JSON.stringify(menuData)
 // orders komen uit Google Sheet
 async function loadOrders() {
     try {
-        const res = await fetch(`${SHEET_URL}?restaurant=${RESTAURANT_ID}`, { mode: "cors" });
+        const res = await fetch(`${SHEET_URL}?restaurant=${RESTAURANT_ID}`);
         const data = await res.json();
-        const today = new Date().toDateString();
+        const today = new Date();
+        const todayStr = today.getDate() + "-" + (today.getMonth()+1) + "-" + today.getFullYear();
         orders = data
-            .filter(row => row.Restaurant === RESTAURANT_ID && new Date(row.Datum + " " + row.Tijd).toDateString() === today)
+            .filter(row => row.Restaurant === RESTAURANT_ID && row.Datum === todayStr)
             .map(row => ({
                 user: row.Naam,
                 items: JSON.parse(row.Items || "[]"),
                 total: parseFloat(row.Bedrag) || 0,
-                date: row.Datum + "T" + row.Tijd
+                date: new Date().toISOString()
             }));
     } catch(e) {
         console.error("Fout bij laden bestellingen:", e);
@@ -267,13 +268,15 @@ async function loadOrders() {
 }
 async function saveOrder(order) {
     const now = new Date();
+    const bestellingObj = order.items.reduce((a,c) => { a[c.name]=(a[c.name]||0)+1; return a; }, {});
+    const bestellingStr = Object.entries(bestellingObj).map(([n,c]) => `${c}x ${n}`).join(", ");
     const payload = {
         datum: now.toLocaleDateString("nl-NL"),
-        tijd: now.toLocaleTimeString("nl-NL"),
+        tijd: now.getHours().toString().padStart(2,"0") + ":" + now.getMinutes().toString().padStart(2,"0"),
         restaurant: RESTAURANT_ID,
         naam: order.user,
         items: JSON.stringify(order.items),
-        bestelling: order.items.reduce((a,c) => { a[c.name]=(a[c.name]||0)+1; return a; }, {}),
+        bestelling: bestellingStr,
         bedrag: order.total.toFixed(2)
     };
     const url = SHEET_URL + "?" + new URLSearchParams(payload).toString();
