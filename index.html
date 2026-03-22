@@ -66,7 +66,7 @@
 
 <script>
     const ADMIN_PASSWORD = "Ipex26";
-    const SHEET_URL = "https://script.google.com/macros/s/AKfycbzDsYVIgQ5r1EhLG4_7C7Wd4uhIjcb6blVGgY9q-iZn80Pk3p1_N3y4OYf0KayWdlt3WA/exec";
+    const SHEET_URL = "/api/sheet";
     const DAY_NAMES_SHORT = ["Ma","Di","Wo","Do","Vr","Za","Zo"];
     const DAY_NAMES_FULL  = ["Maandag","Dinsdag","Woensdag","Donderdag","Vrijdag","Zaterdag","Zondag"];
 
@@ -100,9 +100,7 @@
     // ===== SHEET: SCHEDULING OPSLAAN =====
     async function saveSchedule(restaurantId, schedule) {
         try {
-            await fetch(`${SHEET_URL}?action=saveSchedule&id=${restaurantId}&schedule=${encodeURIComponent(JSON.stringify(schedule))}`, {
-                mode: "no-cors"
-            });
+            await fetch(`${SHEET_URL}?action=saveSchedule&id=${restaurantId}&schedule=${encodeURIComponent(JSON.stringify(schedule))}`);
         } catch(e) {
             console.warn("Schedule opslaan mislukt:", e);
         }

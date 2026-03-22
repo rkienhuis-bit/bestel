@@ -187,7 +187,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs
 const RESTAURANT_ID   = "kebab-ehran";
 const RESTAURANT_NAME = "Kebab van Ehran";
 const ADMIN_PASSWORD  = "Ipex26";
-const SHEET_URL       = "https://script.google.com/macros/s/AKfycbzDsYVIgQ5r1EhLG4_7C7Wd4uhIjcb6blVGgY9q-iZn80Pk3p1_N3y4OYf0KayWdlt3WA/exec";
+const SHEET_URL       = "/api/sheet";
 const LS_USER         = "lunch_user_kebab";
 const LS_ORDERS       = "lunch_orders_kebab";
 const LS_MENU         = "lunch_menu_kebab";
@@ -277,7 +277,7 @@ async function saveOrder(order) {
         bedrag: order.total.toFixed(2)
     };
     const url = SHEET_URL + "?" + new URLSearchParams(payload).toString();
-    await fetch(url, { method: "GET", mode: "no-cors" });
+    await fetch(url, { method: "GET" });
 }
 
 // ============================================================
