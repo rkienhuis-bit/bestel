@@ -1,251 +1,31 @@
 <!DOCTYPE html>
 <html lang="nl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lunch App</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        * { box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f6f9; margin: 0; }
-        .site-header { background: #1a2e4a; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; }
-        .site-header-left h1 { font-size: 18px; font-weight: 800; color: white; margin: 0; letter-spacing: 0.3px; }
-        .site-header-left p { font-size: 11px; color: rgba(255,255,255,0.55); margin: 2px 0 0 0; }
-        .site-header-logo { height: 38px; width: auto; object-fit: contain; }
-        .date-bar { background: #f0a500; color: #1a2e4a; text-align: center; font-size: 11px; font-weight: 700; padding: 7px; letter-spacing: 0.5px; text-transform: uppercase; }
-        .restaurant-card { background: white; border-radius: 16px; padding: 18px 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: 1px solid #e8edf3; transition: transform 0.18s, box-shadow 0.18s; cursor: pointer; text-decoration: none; display: block; }
-        .restaurant-card:hover:not(.closed) { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,0.11); }
-        .restaurant-card.closed { opacity: 0.45; cursor: not-allowed; }
-        .day-btn { font-size: 10px; font-weight: 700; padding: 5px 2px; border-radius: 7px; border: 2px solid; transition: all 0.1s; cursor: pointer; }
-        .day-btn.open { background: #dcfce7; color: #15803d; border-color: #86efac; }
-        .day-btn.closed-day { background: #fee2e2; color: #dc2626; border-color: #fca5a5; }
-        .day-btn.today { outline: 2px solid #1a2e4a; outline-offset: 2px; }
-        .modal-overlay { background: rgba(0,0,0,0.55); display: none; position: fixed; top:0; left:0; right:0; bottom:0; z-index:100; align-items:center; justify-content:center; backdrop-filter:blur(4px); }
-        .modal-overlay.show { display: flex; }
-        #admin-btn { background: rgba(255,255,255,0.12); border: none; color: white; width: 32px; height: 32px; border-radius: 8px; cursor: pointer; font-size: 15px; display: flex; align-items: center; justify-content: center; }
-    </style>
-</head>
-<body class="min-h-screen">
-
-<div class="site-header">
-    <div class="site-header-left">
-        <h1>IPEX Lunch</h1>
-        <p>Kies een eetgelegenheid</p>
-    </div>
-    <img src="https://a.storyblok.com/f/185701/218x218/223e1772d3/ipex-logo.png" class="site-header-logo" alt="IPEX" />
-</div>
-<div class="date-bar" id="today-label"></div>
-
-<div style="max-width:480px;margin:0 auto;padding:20px 16px 80px;">
-    <div style="display:flex;justify-content:flex-end;margin-bottom:16px;">
-        <button id="admin-btn">⚙️</button>
-    </div>
-    <div id="restaurants-grid" class="space-y-4" style="display:flex;flex-direction:column;gap:12px;"></div>
-    <p id="all-closed-msg" class="hidden" style="display:none;text-align:center;color:#8a9ab0;font-size:14px;margin-top:40px;">
-        Vandaag zijn alle eetgelegenheden gesloten.
-    </p>
-</div>
-
-<!-- ADMIN MODAL -->
-<div id="admin-modal" class="modal-overlay">
-    <div class="bg-white rounded-3xl w-full max-w-sm mx-4 shadow-2xl overflow-hidden">
-        <div class="p-6 border-b border-gray-100 flex justify-between items-center">
-            <h2 class="text-xl font-black">Beschikbaarheid Beheren</h2>
-            <button id="close-modal-btn" class="text-gray-400 hover:text-gray-600 text-2xl font-bold">×</button>
-        </div>
-        <div id="admin-password-section" class="p-6">
-            <p class="text-sm text-gray-500 mb-4">Voer het beheerderswachtwoord in om de beschikbaarheid per dag te beheren.</p>
-            <input type="password" id="admin-pw-input" placeholder="Wachtwoord" class="w-full p-3 border border-gray-200 rounded-xl mb-3 text-sm outline-none focus:ring-2 focus:ring-red-300">
-            <button id="admin-pw-btn" class="w-full bg-gray-800 text-white py-3 rounded-xl font-bold hover:bg-gray-900">Doorgaan</button>
-            <p id="pw-error" class="text-red-500 text-xs mt-2 hidden">Verkeerd wachtwoord</p>
-        </div>
-        <div id="admin-schedule-section" class="p-6 hidden max-h-[70vh] overflow-y-auto">
-            <p class="text-xs text-gray-400 font-bold mb-4">Klik op een dag om open/gesloten te wisselen. Vandaag heeft een rand.</p>
-            <div id="schedule-grid" class="space-y-5"></div>
-            <div class="mt-6 pt-4 border-t border-gray-100">
-                <p class="text-xs text-gray-400 mb-2 font-semibold">RESTAURANT TOEVOEGEN</p>
-                <div class="flex gap-2">
-                    <input type="text" id="new-restaurant-name" placeholder="Naam" class="flex-1 p-2 border border-gray-200 rounded-lg text-sm outline-none">
-                    <input type="text" id="new-restaurant-file" placeholder="bestandsnaam" class="w-28 p-2 border border-gray-200 rounded-lg text-sm outline-none">
-                    <button id="add-restaurant-btn" class="bg-green-500 text-white px-3 py-2 rounded-lg font-bold text-sm hover:bg-green-600">+</button>
-                </div>
-                <p class="text-[10px] text-gray-400 mt-1">Bestandsnaam zonder .html, bijv: <em>vistaria</em></p>
-            </div>
-        </div>
-    </div>
-</div>
-
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#10243d"><title>i-Snex · IPEX</title>
+<style>
+:root{--navy:#10243d;--blue:#1479b8;--gold:#f2ad32;--ink:#17283d;--muted:#6b7b8e;--paper:#f3f6fa;--line:#e4eaf1;}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;min-height:100vh}
+header{background:linear-gradient(120deg,#0d2037,#183b5c);color:#fff;padding:22px clamp(18px,4vw,54px);display:flex;align-items:center;justify-content:space-between;gap:18px}
+.brand{display:flex;align-items:center;gap:14px}.brand-mark{width:48px;height:48px;border-radius:15px;background:var(--gold);color:var(--navy);display:grid;place-items:center;font-weight:950;font-size:22px;letter-spacing:-2px;box-shadow:0 7px 22px #0003}.brand h1{font-size:clamp(25px,3vw,34px);line-height:1;margin:0;font-weight:900;letter-spacing:-1.4px}.brand p{margin:6px 0 0;color:#b8c7d7;font-size:12px;letter-spacing:.13em;text-transform:uppercase;font-weight:700}
+.lang{border:1px solid #ffffff35;background:#ffffff12;color:#fff;border-radius:12px;padding:10px 12px;font-weight:700;font-size:14px}
+main{max-width:1220px;margin:0 auto;padding:clamp(22px,4vw,48px) clamp(16px,3vw,34px) 44px}.intro{text-align:center;margin:0 auto 30px;max-width:680px}.eyebrow{font-size:11px;font-weight:900;color:var(--blue);letter-spacing:.18em;text-transform:uppercase}.intro h2{font-size:clamp(28px,4vw,42px);line-height:1.08;letter-spacing:-1.5px;margin:9px 0 10px;color:var(--navy)}.intro p{color:var(--muted);font-size:15px;margin:0}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}.restaurant{background:#fff;border:1px solid var(--line);border-radius:22px;overflow:hidden;box-shadow:0 9px 28px #142b4410;display:flex;flex-direction:column;min-width:0}.restaurant-top{padding:22px 22px 14px;display:flex;align-items:center;gap:13px}.emoji{width:48px;height:48px;border-radius:15px;background:#eef5fa;display:grid;place-items:center;font-size:26px}.restaurant h3{font-size:20px;letter-spacing:-.4px;margin:0;color:var(--navy)}.restaurant .place{font-size:12px;color:var(--muted);margin-top:3px}.qr-wrap{margin:0 22px 18px;border-radius:17px;background:#f8fafc;border:1px solid #edf1f5;padding:14px;display:flex;justify-content:center;align-items:center;min-height:188px}.qr-wrap img{width:158px;height:158px;image-rendering:pixelated}.status{display:flex;align-items:center;gap:7px;padding:0 22px 14px;color:#68798b;font-size:12px}.dot{width:7px;height:7px;border-radius:50%;background:#22a06b}.order-link{margin:0 22px 22px;background:var(--navy);color:white;text-decoration:none;text-align:center;padding:13px;border-radius:12px;font-size:14px;font-weight:800}.order-link:hover{background:#1d456b}.foot{text-align:center;color:#91a0b0;font-size:11px;margin-top:28px}.foot strong{color:#53677d}
+@media(max-width:760px){.grid{grid-template-columns:1fr;max-width:460px;margin:auto}.restaurant{display:grid;grid-template-columns:1fr 150px;grid-template-rows:auto 1fr auto}.restaurant-top{grid-column:1;grid-row:1;padding:18px 14px 8px}.qr-wrap{grid-column:2;grid-row:1/4;margin:14px 14px 14px 0;min-height:150px;padding:8px}.qr-wrap img{width:128px;height:128px}.status{grid-column:1;grid-row:2;padding:4px 14px 10px}.order-link{grid-column:1;grid-row:3;margin:0 14px 16px;padding:11px}.restaurant h3{font-size:17px}header{padding:16px}.brand-mark{width:42px;height:42px}}
+@media(min-width:1100px){main{padding-top:54px}.qr-wrap{min-height:230px}.qr-wrap img{width:184px;height:184px}}
+</style></head>
+<body>
+<header><div class="brand"><div class="brand-mark">i-</div><div><h1>i-Snex</h1><p>IPEX · Scan. Order. Enjoy.</p></div></div><select id="language" class="lang" aria-label="Language"><option value="nl">🇳🇱 Nederlands</option><option value="en">🇬🇧 English</option><option value="de">🇩🇪 Deutsch</option></select></header>
+<main><section class="intro"><div class="eyebrow" data-i18n="eyebrow">DE IPEX BESTELAPP</div><h2 data-i18n="headline">Waar heb je trek in?</h2><p data-i18n="subhead">Kies een eetgelegenheid en scan de QR-code om je bestelling te plaatsen.</p></section>
+<section class="grid" id="restaurants">
+<article class="restaurant" data-restaurant="specht"><div class="restaurant-top"><div class="emoji">🍟</div><div><h3>Cafetaria De Specht</h3><div class="place">Goor</div></div></div><div class="qr-wrap"><img alt="QR-code De Specht"></div><div class="status"><span class="dot"></span><span data-i18n="scan">Scan om te bestellen</span></div><a class="order-link" href="specht.html" data-i18n="order">Bestel bij De Specht →</a></article>
+<article class="restaurant" data-restaurant="bie-immink"><div class="restaurant-top"><div class="emoji">🐟</div><div><h3>Bie Immink</h3><div class="place">Enter</div></div></div><div class="qr-wrap"><img alt="QR-code Bie Immink"></div><div class="status"><span class="dot"></span><span data-i18n="scan">Scan om te bestellen</span></div><a class="order-link" href="bie-immink.html" data-i18n="orderBie">Bestel bij Bie Immink →</a></article>
+<article class="restaurant" data-restaurant="kebab-ehran"><div class="restaurant-top"><div class="emoji">🥙</div><div><h3>Kebab van Erhan</h3><div class="place">Enter</div></div></div><div class="qr-wrap"><img alt="QR-code Kebab van Erhan"></div><div class="status"><span class="dot"></span><span data-i18n="scan">Scan om te bestellen</span></div><a class="order-link" href="kebab-erhan.html" data-i18n="orderKebab">Bestel bij Kebab van Erhan →</a></article>
+</section><div class="foot"><strong>i-Snex</strong> · IPEX <span data-i18n="footer">interne bestelapp</span></div></main>
 <script>
-    const ADMIN_PASSWORD = "Ipex26";
-    const SHEET_URL = "/api/sheet";
-    const DAY_NAMES_SHORT = ["Ma","Di","Wo","Do","Vr","Za","Zo"];
-    const DAY_NAMES_FULL  = ["Maandag","Dinsdag","Woensdag","Donderdag","Vrijdag","Zaterdag","Zondag"];
-
-    const jsDay = new Date().getDay();
-    const todayIdx = jsDay === 0 ? 6 : jsDay - 1;
-
-    const DEFAULT_RESTAURANTS = [
-        { id: "specht",      name: "De Specht",       address: "Goor",  emoji: "🍟", file: "specht.html",      schedule: [0,0,0,0,0,1,1] },
-        { id: "vistaria",    name: "Vistaria Enter",  address: "Enter", emoji: "🐟", file: "vistaria.html",    schedule: [0,0,0,0,0,1,1] },
-        { id: "kebab-ehran", name: "Kebab van Ehran", address: "Enter", emoji: "🥙", file: "kebab-ehran.html", schedule: [0,0,0,0,0,1,1] }
-    ];
-
-    let restaurants = JSON.parse(JSON.stringify(DEFAULT_RESTAURANTS));
-
-    // ===== SHEET: SCHEDULING LADEN =====
-    async function loadSchedule() {
-        try {
-            const res = await fetch(`${SHEET_URL}?action=getSchedule`);
-            const data = await res.json();
-            // Merge sheet schedule into restaurants
-            restaurants.forEach(r => {
-                if (data[r.id]) {
-                    r.schedule = JSON.parse(data[r.id]);
-                }
-            });
-        } catch(e) {
-            console.warn("Schedule laden mislukt, gebruik defaults:", e);
-        }
-    }
-
-    // ===== SHEET: SCHEDULING OPSLAAN =====
-    async function saveSchedule(restaurantId, schedule) {
-        try {
-            await fetch(`${SHEET_URL}?action=saveSchedule&id=${restaurantId}&schedule=${encodeURIComponent(JSON.stringify(schedule))}`);
-        } catch(e) {
-            console.warn("Schedule opslaan mislukt:", e);
-        }
-        // Ook lokaal cachen als fallback
-        localStorage.setItem("lunchSchedule_" + restaurantId, JSON.stringify(schedule));
-    }
-
-    // ===== RENDER HOME =====
-    function render() {
-        const grid = document.getElementById("restaurants-grid");
-        grid.innerHTML = "";
-        document.getElementById("today-label").textContent =
-            new Date().toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "long" }).toUpperCase();
-
-        let anyOpen = false;
-        restaurants.forEach(r => {
-            const isOpen = r.schedule[todayIdx] === 0;
-            if (isOpen) anyOpen = true;
-            const a = document.createElement("a");
-            a.href = isOpen ? r.file : "#";
-            a.className = `restaurant-card ${isOpen ? "" : "closed"}`;
-            a.onclick = isOpen ? null : (e) => e.preventDefault();
-            a.innerHTML = `
-                <div style="display:flex;align-items:center;justify-content:space-between;">
-                    <div style="display:flex;align-items:center;gap:12px;">
-                        <span style="font-size:26px;">${r.emoji}</span>
-                        <div>
-                            <div style="font-weight:800;color:#1a2e4a;font-size:15px;">${r.name}</div>
-                            <div style="font-size:12px;color:#8a9ab0;margin-top:2px;">${r.address}</div>
-                        </div>
-                    </div>
-                    <div style="display:flex;align-items:center;gap:8px;">
-                        <span style="font-size:11px;font-weight:700;padding:5px 12px;border-radius:20px;${isOpen ? "background:#e6f4ea;color:#2d7a3a;" : "background:#fce8e8;color:#c0392b;"}">
-                            ${isOpen ? "Open ✓" : "Gesloten"}
-                        </span>
-                        ${isOpen ? '<span style="color:#1a2e4a;opacity:0.3;font-size:18px;">›</span>' : ""}
-                    </div>
-                </div>`;
-            grid.appendChild(a);
-        });
-        document.getElementById("all-closed-msg").style.display = anyOpen ? "none" : "block";
-    }
-
-    // ===== ADMIN MODAL =====
-    document.getElementById("admin-btn").onclick = () => {
-        document.getElementById("admin-modal").classList.add("show");
-        document.getElementById("admin-pw-input").value = "";
-        document.getElementById("pw-error").classList.add("hidden");
-        document.getElementById("admin-password-section").classList.remove("hidden");
-        document.getElementById("admin-schedule-section").classList.add("hidden");
-    };
-    document.getElementById("close-modal-btn").onclick = () => {
-        document.getElementById("admin-modal").classList.remove("show");
-    };
-    document.getElementById("admin-modal").onclick = (e) => {
-        if (e.target === document.getElementById("admin-modal"))
-            document.getElementById("admin-modal").classList.remove("show");
-    };
-    document.getElementById("admin-pw-btn").onclick = checkPassword;
-    document.getElementById("admin-pw-input").onkeydown = (e) => { if (e.key === "Enter") checkPassword(); };
-
-    function checkPassword() {
-        if (document.getElementById("admin-pw-input").value === ADMIN_PASSWORD) {
-            document.getElementById("admin-password-section").classList.add("hidden");
-            document.getElementById("admin-schedule-section").classList.remove("hidden");
-            renderScheduleGrid();
-        } else {
-            document.getElementById("pw-error").classList.remove("hidden");
-            document.getElementById("admin-pw-input").value = "";
-        }
-    }
-
-    function renderScheduleGrid() {
-        const grid = document.getElementById("schedule-grid");
-        grid.innerHTML = "";
-        restaurants.forEach((r, rIdx) => {
-            const div = document.createElement("div");
-            div.innerHTML = `
-                <div class="flex items-center justify-between mb-2">
-                    <span class="font-bold text-sm">${r.emoji} ${r.name}</span>
-                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${r.schedule[todayIdx] === 0 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"}">
-                        Vandaag: ${r.schedule[todayIdx] === 0 ? "Open" : "Gesloten"}
-                    </span>
-                </div>`;
-            const daysRow = document.createElement("div");
-            daysRow.className = "grid grid-cols-7 gap-1";
-            DAY_NAMES_SHORT.forEach((day, dIdx) => {
-                const isOpen = r.schedule[dIdx] === 0;
-                const isToday = dIdx === todayIdx;
-                const btn = document.createElement("button");
-                btn.className = `day-btn ${isOpen ? "open" : "closed-day"} ${isToday ? "today" : ""}`;
-                btn.title = DAY_NAMES_FULL[dIdx];
-                btn.textContent = day;
-                btn.onclick = async () => {
-                    restaurants[rIdx].schedule[dIdx] = restaurants[rIdx].schedule[dIdx] === 0 ? 1 : 0;
-                    await saveSchedule(r.id, restaurants[rIdx].schedule);
-                    renderScheduleGrid();
-                    render();
-                };
-                daysRow.appendChild(btn);
-            });
-            div.appendChild(daysRow);
-            grid.appendChild(div);
-        });
-    }
-
-    // ===== ADD RESTAURANT =====
-    document.getElementById("add-restaurant-btn").onclick = async () => {
-        const name = document.getElementById("new-restaurant-name").value.trim();
-        const file = document.getElementById("new-restaurant-file").value.trim();
-        if (!name || !file) { alert("Vul naam én bestandsnaam in."); return; }
-        const r = { id: file, name, address: "", emoji: "🍽️", file: file + ".html", schedule: [0,0,0,0,0,1,1] };
-        restaurants.push(r);
-        await saveSchedule(r.id, r.schedule);
-        document.getElementById("new-restaurant-name").value = "";
-        document.getElementById("new-restaurant-file").value = "";
-        renderScheduleGrid();
-        render();
-    };
-
-    // ===== INIT =====
-    async function init() {
-        // Toon eerst met lokale cache als fallback
-        restaurants.forEach(r => {
-            const cached = localStorage.getItem("lunchSchedule_" + r.id);
-            if (cached) r.schedule = JSON.parse(cached);
-        });
-        render();
-        // Daarna echte data uit Sheet laden
-        await loadSchedule();
-        render();
-    }
-
-    init();
-</script>
-</body>
-</html>
+const copy={nl:{eyebrow:'DE IPEX BESTELAPP',headline:'Waar heb je trek in?',subhead:'Kies een eetgelegenheid en scan de QR-code om je bestelling te plaatsen.',scan:'Scan om te bestellen',order:'Bestel bij De Specht →',orderBie:'Bestel bij Bie Immink →',orderKebab:'Bestel bij Kebab van Erhan →',footer:'interne bestelapp'},en:{eyebrow:'THE IPEX FOOD ORDERING APP',headline:'What are you in the mood for?',subhead:'Choose a restaurant and scan its QR code to place your order.',scan:'Scan to order',order:'Order from De Specht →',orderBie:'Order from Bie Immink →',orderKebab:'Order from Kebab van Erhan →',footer:'internal food ordering app'},de:{eyebrow:'DIE IPEX-BESTELLAPP',headline:'Worauf hast du Appetit?',subhead:'Wähle ein Restaurant und scanne den QR-Code, um deine Bestellung aufzugeben.',scan:'Scannen und bestellen',order:'Bei De Specht bestellen →',orderBie:'Bei Bie Immink bestellen →',orderKebab:'Bei Kebab van Erhan bestellen →',footer:'interne Bestell-App'}};
+function setLanguage(lang){document.documentElement.lang=lang;document.querySelectorAll('[data-i18n]').forEach(el=>{const key=el.dataset.i18n;el.textContent=copy[lang][key]||copy.nl[key]});localStorage.setItem('isnex-language',lang)}
+document.getElementById('language').addEventListener('change',e=>setLanguage(e.target.value));const initial=localStorage.getItem('isnex-language')||'nl';document.getElementById('language').value=initial;setLanguage(initial);
+const paths={specht:'specht.html','bie-immink':'bie-immink.html','kebab-ehran':'kebab-erhan.html'};
+document.querySelectorAll('[data-restaurant]').forEach(card=>{const target=new URL(paths[card.dataset.restaurant],location.href).href;const img=card.querySelector('img');img.src='https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=8&data='+encodeURIComponent(target);});
+</script></body></html>
