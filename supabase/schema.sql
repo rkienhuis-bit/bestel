@@ -50,6 +50,10 @@ alter table public.menu_items enable row level security;
 alter table public.orders enable row level security;
 alter table public.user_roles enable row level security;
 
+-- A signed-in manager must be able to read their own role before the dashboard opens.
+drop policy if exists "Users read own role" on public.user_roles;
+create policy "Users read own role" on public.user_roles for select to authenticated using (user_id = auth.uid());
+
 -- Public can read active restaurant and menu data.
 drop policy if exists "Active restaurants are public" on public.restaurants;
 create policy "Active restaurants are public" on public.restaurants for select using (active = true);

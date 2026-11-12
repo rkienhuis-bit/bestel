@@ -42,3 +42,35 @@ Upload the contents of this folder to the root of the static website. Use `displ
 - `menus.js`: menu data
 - `config.js`: Supabase public configuration
 - `supabase/schema.sql`: database and row-level security schema
+
+
+## Manager dashboard and A4 supplier PDFs (v5 addition)
+
+Open `manager.html` on the deployed site to access the manager dashboard. The dashboard requires a Supabase email/password account with a `manager` or `admin` row in `public.user_roles`.
+
+### Set up a manager account
+1. In Supabase, enable Email/Password sign-in and create a user under Authentication → Users.
+2. Run the updated `supabase/schema.sql` in the SQL Editor (safe to re-run; it adds the policy allowing a user to read their own role).
+3. Copy the new user's UUID from Authentication → Users and run:
+
+```sql
+insert into public.user_roles (user_id, role)
+values ('PASTE-USER-UUID-HERE', 'manager');
+```
+
+Use `admin` instead of `manager` if the account should eventually manage menu data too. Do not put the Supabase service-role key in the website.
+
+### What works in this version
+- Manager email/password login and role check.
+- Reads shared orders from Supabase (up to the latest 1,000).
+- Filters by order date and restaurant.
+- Updates order status, including a locked status.
+- Creates a downloadable A4 PDF for each restaurant, with employee names, ordered items, options, item notes, general order notes and known line totals. Long tickets automatically continue onto additional A4 pages.
+
+PDF creation uses the browser and the jsPDF libraries loaded from a CDN. The manager downloads one PDF per supplier and can email it or print it.
+
+### Current boundaries
+- The manager dashboard requires Supabase; local-only test orders on another device are not shared.
+- The date filter is based on the order's creation date. A dedicated weekly order-round / cutoff workflow is a later step.
+- Menu editing and central menu storage are not implemented yet; menu data is still in `menus.js`.
+- A PDF is generated from the orders currently saved in Supabase. It does not send anything to a supplier automatically.

@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#101c2d"><title>i-Snex · Manager</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Manrope:wght@600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="manager.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.4/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body class="manager-body">
+<header class="topbar"><a class="brand" href="index.html"><span class="brand-symbol">i<span>·</span></span><span class="brand-name">i-Snex<small>MANAGER</small></span></a><div class="top-actions"><a class="ghost-btn" href="index.html">← Naar bestelapp</a></div></header>
+<main class="manager-shell">
+<section id="manager-login" class="manager-login panel"><div class="eyebrow">IPEX FOOD CLUB · BEHEER</div><h1>Manager<br><em>dashboard.</em></h1><p>Log in met je manageraccount om bestellingen te bekijken en PDF-tickets te maken.</p><form id="login-form"><label for="manager-email">E-mailadres</label><input id="manager-email" type="email" autocomplete="username" required placeholder="naam@bedrijf.nl"><label for="manager-password">Wachtwoord</label><input id="manager-password" type="password" autocomplete="current-password" required><button class="primary-btn" type="submit">Inloggen <span>↗</span></button><p id="login-error" class="manager-error" role="alert"></p></form></section>
+<section id="manager-dashboard" class="hidden">
+<div class="manager-heading"><div><div class="eyebrow">IPEX FOOD CLUB · OVERZICHT</div><h1>Bestellingen<span class="orange">.</span></h1><p id="manager-welcome">Beheer de lunchbestellingen.</p></div><button id="logout-btn" class="ghost-btn">Uitloggen ↗</button></div>
+<div class="manager-stats"><article><strong id="stat-orders">0</strong><span>Bestellingen</span></article><article><strong id="stat-people">0</strong><span>Medewerkers</span></article><article><strong id="stat-total">€ 0,00</strong><span>Bekend totaal*</span></article></div>
+<div class="manager-toolbar panel"><div><label for="order-date">Besteldatum</label><input id="order-date" type="date"></div><div><label for="restaurant-filter">Restaurant</label><select id="restaurant-filter"><option value="all">Alle restaurants</option><option value="specht">De Specht</option><option value="bie">Bie Immink</option><option value="kebab">Kebab van Erhan</option></select></div><button id="refresh-orders" class="secondary-btn">↻ Vernieuwen</button></div>
+<div class="manager-actions panel"><div><strong>Leveranciers-PDF's</strong><p>Maak per restaurant één A4-bestelbon met alle medewerkers en hun bestellingen.</p></div><div class="pdf-actions"><button class="primary-btn" data-pdf="specht">PDF · De Specht ↓</button><button class="primary-btn" data-pdf="bie">PDF · Bie Immink ↓</button><button class="primary-btn" data-pdf="kebab">PDF · Erhan ↓</button></div></div>
+<div class="orders-panel panel"><div class="orders-panel-head"><div><strong>Orderoverzicht</strong><p id="orders-caption">Bestellingen worden geladen…</p></div><span id="order-state" class="status-pill">Live</span></div><div id="manager-orders" class="manager-orders"></div></div>
+<p class="manager-footnote">* Bekend totaal telt alleen regels met een bekende prijs mee. Producten met prijs op locatie en gewichtsartikelen kunnen afwijken.</p>
+</section>
+</main><div id="manager-toast" class="toast" role="status"></div>
+<script src="menus.js"></script><script src="manager.js"></script>
+</body></html>
