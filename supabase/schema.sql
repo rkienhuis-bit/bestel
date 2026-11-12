@@ -28,7 +28,8 @@ create table if not exists public.orders (
   restaurant_id text not null references public.restaurants(id),
   employee_name text not null,
   items jsonb not null check (jsonb_typeof(items) = 'array'),
-  total numeric(10,2) not null check (total >= 0),
+  total numeric(10,2) check (total >= 0),
+  note text,
   status text not null default 'new' check (status in ('new','accepted','completed','cancelled','locked')),
   locked_at timestamptz,
   created_at timestamptz not null default now(),
@@ -76,5 +77,5 @@ create policy "Admins manage restaurants" on public.restaurants for all to authe
 insert into public.restaurants (id,name,menu_source_url) values
 ('specht','Cafetaria De Specht','https://cafetariadespecht.nl/wp-content/uploads/2025/03/Menukaart-Restaurant-2025.pdf'),
 ('bie','Bie Immink','https://bieimmink.nl/'),
-('kebab','Kebab van Erhan','https://kebabvanerhan.nl/')
+('kebab','Kebab van Erhan','https://www.instagram.com/kebab_van_erhan/')
 on conflict (id) do update set name=excluded.name,menu_source_url=excluded.menu_source_url;

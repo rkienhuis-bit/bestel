@@ -24,7 +24,15 @@ window.ISNEX_MENUS = {
   },
   kebab: {
     name:"Kebab van Erhan", short:"Kebab van Erhan", town:"Enter", emoji:"🥙", accent:"#e58b62", className:"kebab",
-    description:"Zin in döner, dürüm of iets van de grill? We controleren de actuele kaart.", sourceUrl:"https://kebabvanerhan.nl/", sourceLabel:"Website Kebab van Erhan",
-    categories: []
+    description:"Vers gesneden döner, broodjes, dürüm en Turkse pizza. Prijzen worden bij de foodtruck bevestigd.",
+    sourceUrl:"https://www.instagram.com/kebab_van_erhan/", sourceLabel:"Instagram Kebab van Erhan",
+    socialLinks:["https://www.instagram.com/kebab_van_erhan/","https://www.facebook.com/p/Kebab-van-Erhan-100049790695923/?locale=nl_NL"],
+    categories: [
+      {name:"Döner",items:[["Döner kebab",null,{label:"Vleessoort",choices:["Kip","Kalf"]}]]},
+      {name:"Broodjes & boxen",items:[["Broodje kebab",null,{label:"Vleessoort",choices:["Kip","Kalf"]}],["Dönerbox",null,{label:"Vleessoort",choices:["Kip","Kalf"]}]]},
+      {name:"Dürüm & pizza",items:[["Wrap / Dürüm",null,{label:"Vleessoort",choices:["Kip","Kalf"]}],["Lahmacun (Turkse pizza)",null,{label:"Extra's / opmerkingen",freeText:true}]]},
+      {name:"Sauzen & extra's",items:[["Knoflooksaus",null]]},
+      {name:"Cadeaubonnen",items:[["Cadeaubon vanaf €10",10]]}
+    ]
   }
 };

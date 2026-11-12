@@ -1,4 +1,4 @@
-# i-Snex v2 — IPEX food ordering
+# i-Snex v3 — IPEX food ordering
 
 A new, unified ordering flow. This is a working front-end foundation, not yet a production-connected ordering system.
 
@@ -40,3 +40,9 @@ When configured, the app creates an anonymous Supabase session and saves orders 
 - De Specht official 2025 menu: https://cafetariadespecht.nl/wp-content/uploads/2025/03/Menukaart-Restaurant-2025.pdf
 - Bie Immink: https://bieimmink.nl/
 - Kebab van Erhan: https://kebabvanerhan.nl/
+
+
+## Update: Kebab van Erhan
+The Kebab menu is restored with the offerings confirmed by the user: freshly sliced chicken/veal döner, kebab sandwich, dönerbox, wrap/dürüm, lahmacun, garlic sauce and gift vouchers from €10. Product prices are intentionally left unspecified because the supplier does not publish them. Chicken/veal choice is available for döner products. Orders can include an optional general note. Unknown-price items are marked 'Prijs op locatie'; the order total remains pending rather than showing a fabricated amount. Kebab links point to the supplied Instagram and Facebook profiles, not a guessed website.
+
+If you already ran the previous Supabase schema, apply the schema change manually: make `orders.total` nullable and add `orders.note text`. The updated schema.sql includes both changes for fresh installs.
