@@ -50,6 +50,13 @@ alter table public.menu_items enable row level security;
 alter table public.orders enable row level security;
 alter table public.user_roles enable row level security;
 
+-- Explicit API privileges because the project was created with
+-- "Automatically expose new tables" disabled.
+grant usage on schema public to anon, authenticated;
+grant select on public.restaurants, public.menu_items to anon, authenticated;
+grant select, insert, update on public.orders to authenticated;
+grant select on public.user_roles to authenticated;
+
 -- A signed-in manager must be able to read their own role before the dashboard opens.
 drop policy if exists "Users read own role" on public.user_roles;
 create policy "Users read own role" on public.user_roles for select to authenticated using (user_id = auth.uid());
