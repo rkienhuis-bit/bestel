@@ -16,7 +16,7 @@ create table if not exists public.menu_items (
   category text not null,
   name text not null,
   description text,
-  price numeric(10,2) not null check (price >= 0),
+  price numeric(10,2) check (price is null or price >= 0),
   active boolean not null default true,
   sort_order integer not null default 0,
   updated_at timestamptz not null default now()
@@ -75,7 +75,7 @@ drop policy if exists "Admins manage restaurants" on public.restaurants;
 create policy "Admins manage restaurants" on public.restaurants for all to authenticated using (exists (select 1 from public.user_roles r where r.user_id = auth.uid() and r.role = 'admin')) with check (exists (select 1 from public.user_roles r where r.user_id = auth.uid() and r.role = 'admin'));
 
 insert into public.restaurants (id,name,menu_source_url) values
-('specht','Cafetaria De Specht','https://cafetariadespecht.nl/wp-content/uploads/2025/03/Menukaart-Restaurant-2025.pdf'),
-('bie','Bie Immink','https://bieimmink.nl/'),
+('specht','Cafetaria De Specht','https://cafetariadespecht.nl/wp-content/uploads/2026/10/A3_Afhaalmenu_2026_compressed.pdf'),
+('bie','Bie Immink','https://bieimmink.nl/menu/'),
 ('kebab','Kebab van Erhan','https://www.instagram.com/kebab_van_erhan/')
 on conflict (id) do update set name=excluded.name,menu_source_url=excluded.menu_source_url;

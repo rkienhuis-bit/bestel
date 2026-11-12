@@ -1,48 +1,44 @@
-# i-Snex v3 — IPEX food ordering
+# i-Snex v4 — IPEX food ordering
 
-A new, unified ordering flow. This is a working front-end foundation, not yet a production-connected ordering system.
+This is an improved mobile-first ordering prototype. It is still a prototype until Supabase is configured and the order manager flow is built.
 
-## What's new
-- Name is entered first, before choosing a restaurant. It is remembered on that device and can be changed.
-- One responsive ordering experience for all three restaurants: restaurant selection → menu → basket → review → confirmation.
-- More playful visual design, mobile-friendly basket, search and category filters.
-- De Specht menu seeded from its official 2025 PDF. The PDF itself is linked in the app. **Prices must be confirmed with De Specht before live ordering**, because the published menu is from 2025.
-- Bie Immink and Kebab van Erhan are linked to their own websites. Their actual product lists are not invented: the app shows a clear “menu being prepared” state until verified menu data is added.
-- Supabase schema included for central menus, orders, employee-private order history and manager/admin roles.
+## What changed in this build
+- Name first, then restaurant selection.
+- Each restaurant now has its own visual treatment.
+- De Specht is populated from the official 2026 takeaway menu PDF linked on its website.
+- Bie Immink is populated from the menu and prices supplied in the conversation. The menu page is linked directly.
+- Kebab van Erhan's confirmed offering is restored. Chicken/veal selection uses an inline two-choice switch, not a browser popup. Prices that are not published remain marked `Prijs op locatie`.
+- Products can have required choices, optional extras, item-specific notes and a quantity selector.
+- The checkout still supports a general order message.
+- Weight-based Bie Immink products show their unit price and the basket total is marked as an estimate. Actual weight can change the final amount.
+- Official restaurant imagery is used where accessible: De Specht's own website photo and a recent Bie Immink shop photo from 1Twente. Kebab van Erhan's social posts could not be fetched reliably, so no fake “official” Kebab image has been substituted. The restaurant's supplied Instagram and Facebook links are used instead.
 
-## Preview without a database
-Upload the files to a static host. Use `display.html` as the Yodeck screen; employees scan a restaurant QR and are taken to `index.html` with their restaurant preselected. Open `index.html` directly for normal browsing. The app uses local browser storage for preview orders. These orders are only on that device and are NOT shared or suitable for real company ordering.
+## Menu sources
+- De Specht: official 2026 takeaway PDF: https://cafetariadespecht.nl/wp-content/uploads/2026/10/A3_Afhaalmenu_2026_compressed.pdf
+- Bie Immink: https://bieimmink.nl/menu/ — item names and prices entered from the menu text supplied by IPEX. The disclaimer from the source is shown in the app.
+- Kebab van Erhan: https://www.instagram.com/kebab_van_erhan/ and https://www.facebook.com/p/Kebab-van-Erhan-100049790695923/?locale=nl_NL. Product list supplied by IPEX; prices not publicly listed.
+
+## Run as a preview
+Upload the contents of this folder to the root of the static website. Use `display.html` as the Yodeck QR screen. Open `index.html` to test ordering. Without Supabase configured, orders are saved only in the current browser's local storage; they are not shared between employees.
 
 ## Connect Supabase (free tier)
 1. Create a Supabase project.
 2. In Authentication → Providers, enable **Anonymous Sign-Ins**.
-3. Open SQL Editor and run `supabase/schema.sql`.
-4. Copy the Project URL and anon/public key into `config.js`.
-5. Deploy again. Never use the `service_role` key in `config.js`.
+3. Run `supabase/schema.sql` in SQL Editor.
+4. Put the Supabase Project URL and anon/public key in `config.js`.
+5. Deploy again. Never put the `service_role` key in browser code.
 
-When configured, the app creates an anonymous Supabase session and saves orders to the database. The RLS policies ensure employees can only see their own orders. Admin/manager screens and the central menu editor are the next implementation step; the database permissions are prepared but the UI is not yet included.
+## Still not production-ready
+- Supabase must be configured; the current menu data is seeded in `menus.js` and not yet centrally editable.
+- Manager/admin dashboard, central menu editor, order cut-off, locking, edit/cancel flow and consolidated restaurant tickets are not yet implemented.
+- Private order history and robust account/device recovery need further testing.
+- Weight-based products are estimated using the listed per-kilo or per-100g rate; actual checkout weight may differ.
+- De Specht's 2026 PDF lists sauce varieties but does not list sauce prices, so those are intentionally shown as `Prijs op locatie` rather than reusing older prices.
+- Kebab van Erhan's social-media images remain unavailable for reliable extraction. If you can upload screenshots of those posts, I can incorporate the actual food photography and any further menu detail.
 
-## Important before real use
-- The current ordering page does not yet load menu items from Supabase; the De Specht menu is seeded in `menus.js` for the prototype. Bie Immink and Kebab menus need verified item/price data.
-- The app currently inserts orders, but editing/cancelling orders and order cut-off/locking are not yet implemented in the UI.
-- Admin/manager roles must be assigned securely after users exist; do not expose service-role credentials in the browser.
-- Supabase free projects can pause after inactivity. Export/backup orders periodically.
-- Add a proper privacy notice and confirm the internal data-retention approach before company-wide use.
-
-## Project files
-- `index.html`, `styles.css`, `app.js`: unified app
-- `display.html`: separate Yodeck screen with restaurant QR codes; each QR opens the app with that restaurant preselected, while still asking for the employee name first
-- `menus.js`: menu seed data
-- `config.js`: Supabase public configuration (empty by default)
+## Files
+- `index.html`, `styles.css`, `app.js`: ordering experience
+- `display.html`: Yodeck start screen and restaurant QR codes
+- `menus.js`: menu data
+- `config.js`: Supabase public configuration
 - `supabase/schema.sql`: database and row-level security schema
-
-## Menu source notes
-- De Specht official 2025 menu: https://cafetariadespecht.nl/wp-content/uploads/2025/03/Menukaart-Restaurant-2025.pdf
-- Bie Immink: https://bieimmink.nl/
-- Kebab van Erhan: https://kebabvanerhan.nl/
-
-
-## Update: Kebab van Erhan
-The Kebab menu is restored with the offerings confirmed by the user: freshly sliced chicken/veal döner, kebab sandwich, dönerbox, wrap/dürüm, lahmacun, garlic sauce and gift vouchers from €10. Product prices are intentionally left unspecified because the supplier does not publish them. Chicken/veal choice is available for döner products. Orders can include an optional general note. Unknown-price items are marked 'Prijs op locatie'; the order total remains pending rather than showing a fabricated amount. Kebab links point to the supplied Instagram and Facebook profiles, not a guessed website.
-
-If you already ran the previous Supabase schema, apply the schema change manually: make `orders.total` nullable and add `orders.note text`. The updated schema.sql includes both changes for fresh installs.
