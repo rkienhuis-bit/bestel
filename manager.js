@@ -85,7 +85,19 @@
     const pages=doc.getNumberOfPages();for(let p=1;p<=pages;p++){doc.setPage(p);doc.setFontSize(8);doc.setTextColor(120);doc.text(`i-Snex · ${restaurantName(restaurantId)} · pagina ${p}/${pages}`,14,289);}
     doc.save(`i-Snex-${restaurantId}-${day}.pdf`);toast('PDF aangemaakt: '+restaurantName(restaurantId));
   }
-  $('login-form').addEventListener('submit',async e=>{e.preventDefault();$('login-error').textContent='';const email=$('manager-email').value.trim(),password=$('manager-password').value;const {data,error}=await client.auth.signInWithPassword({email,password});if(error){$('login-error').textContent='Inloggen mislukt: '+error.message;return;}await verifyManager(data.session);});
+  // Supabase Auth uses an internal, non-personal placeholder identity. The manager
+  // only enters the simple username shown on this page; no inbox is connected.
+  const MANAGER_USERNAME = 'manager';
+  const MANAGER_AUTH_EMAIL = 'manager@isnex.invalid';
+  $('login-form').addEventListener('submit',async e=>{
+    e.preventDefault(); $('login-error').textContent='';
+    const username=$('manager-username').value.trim().toLowerCase();
+    const password=$('manager-password').value;
+    if(username!==MANAGER_USERNAME){$('login-error').textContent='Onjuiste gebruikersnaam of wachtwoord.';return;}
+    const {data,error}=await client.auth.signInWithPassword({email:MANAGER_AUTH_EMAIL,password});
+    if(error){$('login-error').textContent='Inloggen mislukt. Controleer gebruikersnaam en wachtwoord.';return;}
+    await verifyManager(data.session);
+  });
   $('logout-btn').onclick=async()=>{await client.auth.signOut();location.reload();};
   $('refresh-orders').onclick=loadOrders;$('order-date').onchange=render;$('restaurant-filter').onchange=render;
   document.querySelectorAll('[data-pdf]').forEach(b=>b.onclick=()=>pdfFor(b.dataset.pdf));
